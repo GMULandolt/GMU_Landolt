@@ -32,6 +32,7 @@ Database = 'DSS'                 #2MASS, DSS
 queryrad = "0d1m0s"                #X(d)Y(m)Z(s)
 
 
+
 height    = 4096                   #Pixel image sizes
 width     = 4096
 
@@ -184,7 +185,7 @@ print ("INFO: Fits file modification complete")
 gc = aplpy.FITSFigure(result)
 gc.show_colorscale(cmap='inferno')
 gc.show_contour(data=result,filled=False,cmap='inferno')
-gc.show_rgb()
+#gc.show_rgb()
 #gc.show_markers(object_coords.ra, object_coords.dec, edgecolor='red',marker='s', s=50**2)              
 gc.save('2MASS_UNEDITED.png')
 
