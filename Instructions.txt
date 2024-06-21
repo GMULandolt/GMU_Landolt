@@ -11,6 +11,8 @@ STAGE AND COMMIT FIRST
 
 "git add -A" to add new files to track
 
+"git commit -am "(what has changed)"
+
 "git push origin main" when finished.
 
 
