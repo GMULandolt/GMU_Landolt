@@ -1,0 +1,18 @@
+If I make a change, it will track.
+
+When I go to stage, commit, push, it will only do that file. When pulled, it will grab the changed file automatically
+
+do a "git pull origin main --allow-unrelated-histories" every time I start work.
+
+
+STAGE AND COMMIT FIRST
+
+"git add -u" to stage
+
+"git add -A" to add new files to track
+
+"git commit -am "(what has changed)"
+
+"git push origin main" when finished.
+
+
