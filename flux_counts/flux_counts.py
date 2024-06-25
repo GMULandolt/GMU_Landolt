@@ -23,6 +23,7 @@ lmbda_n = 0 # determines which laser is being looked at
 P_0 = [0.25, 0.1, 0.5, 0.1] # power of laser
 diam_t = 0.8128 # diameter of telescope
 a_t = np.pi*(0.8128/2)**2 # area that the telescope is able to take in light
+current_time = 12 # time from start of heigh data file in units of the incriment value of that data file
 
 ### CALCULATIONS ###
 
@@ -44,27 +45,30 @@ for i in range(len(z)):
 print('Done!')
 
 plt.figure()
-plt.plot(x,flux[0])
+plt.plot(x,flux[current_time])
 plt.xlabel('Displacement from original beam path (m)')
 plt.ylabel('Intensity (W/m\u00b2)')
 
-dis_t = np.linspace(1,max(w_z),num=10000) # distance of telescope from center of beam
-tflux = np.zeros([len(z),len(dis_t)])
-counts = np.zeros([len(z),len(dis_t)])
-diff_tflux = np.zeros([len(z),len(dis_t)])
-diff_counts = np.zeros([len(z),len(dis_t)])
-diff_alt = np.zeros([len(z),len(dis_t)])
+dis_t = np.linspace(1,w_z[current_time],num=10000) # distance of telescope from center of beam
+theta = np.linspace(np.arctan(dis_t[0]/z[current_time]),np.arctan(max(dis_t)/z[current_time]),num=10000) # angle made between the normal of earth's surface and a beam of light landing a given distance away from the normal
+
+z_new = np.zeros(len(dis_t))
+tflux = np.zeros(len(dis_t))
+counts = np.zeros(len(dis_t))
+diff_tflux = np.zeros(len(dis_t))
+diff_counts = np.zeros(len(dis_t))
+diff_alt = np.zeros(len(dis_t))
 
 print('Loop 2') # finds the total flux over a given detector area assuming the detector is in the center of the beam
-for i in range(len(z)):
-    for j in range(len(dis_t)):
-        def flux_fn(r):
-            return r*I_0*((w_0/w_z[i])**2)*np.e**((-2*r**2)/w_z[i]**2)
-        tflux_temp = quad(flux_fn, -(diam_t/2) + dis_t[j], (diam_t/2) + dis_t[j]) # flux taken in by a given telescope
-        coeftemp = np.pi*(((diam_t/2) + dis_t[j])**2 - (-(diam_t/2) + dis_t[j])**2) / a_t # calculates fraction of distribution needed to be swept over to get an area a_t
-        tflux[i,j] = tflux_temp[0]*(np.pi/coeftemp) # integrating over an angle that gives us an arclength of the diameter of the telescope
-        counts[i,j] = (tflux[i,j]*lmbda[lmbda_n])/(6.62607015e-34*299792458) # total counts taken in
-    print('\r' + str(int(i/len(z) * 10000)/100) + "%", end='', flush=True)
+for i in range(len(dis_t)):
+    def flux_fn(r):
+        return r*I_0*((w_0/w_z[current_time])**2)*np.e**((-2*r**2)/w_z[current_time]**2)
+    z_new[i] = (z[current_time]+(0.00008*dis_t[i]))/np.cos(theta[i])
+    tflux_temp = quad(flux_fn, -(diam_t/2) + dis_t[i], (diam_t/2) + dis_t[i]) # flux taken in by a given telescope
+    coeftemp = np.pi*(((diam_t/2) + dis_t[i])**2 - (-(diam_t/2) + dis_t[i])**2) / a_t # calculates fraction of distribution needed to be swept over to get an area a_t
+    tflux[i] = tflux_temp[0]*(np.pi/coeftemp) # integrating over an angle that gives us an arclength of the diameter of the telescope
+    counts[i] = (tflux[i]*lmbda[lmbda_n])/(6.62607015e-34*299792458) # total counts taken in
+    print('\r' + str(int(i/len(dis_t) * 10000)/100) + "%", end='', flush=True)
 print('Done!')
 
 """
@@ -140,7 +144,7 @@ def mie_coef(lmbda, d, N):
 
 ### CALCULATING INTENSITY WITH ATMOSPHERIC ABSORPTION ###
 
-N = 1e44 / (((4/3)*np.pi*(6371000 + z)**3) - (4/3)*np.pi*(6371000)**3)# average number of molecules that measured light passes per square meter
+N = 1e44 / (((4/3)*np.pi*(6371000 + z_new)**3) - (4/3)*np.pi*(6371000)**3)# average number of molecules that measured light passes per square meter
 
 # rayleigh scattering cross sections for 488 nm
 
@@ -158,15 +162,15 @@ cs_ne = 0.33e-31
 #cs_co2 = 6.22e-31
 #cs_ne = 0.128e-31
 
-I_final = np.zeros([len(z),10000])
-r_coef = r_coef(cs_n2, z, N*0.78084) + r_coef(cs_o2, z, N*0.20946) + r_coef(cs_ar, z, N*0.00934) + r_coef(cs_co2, z, N*0.000397) + r_coef(cs_ne, z, N*1.818e-5) # scattering coefficient from rayleigh scattering
-m_coef = np.ones(len(z))*np.e**(-0.15*(1/np.cos(0)))
+I_final = np.zeros(len(z_new))
+r_coef = r_coef(cs_n2, z_new, N*0.78084) + r_coef(cs_o2, z_new, N*0.20946) + r_coef(cs_ar, z_new, N*0.00934) + r_coef(cs_co2, z_new, N*0.000397) + r_coef(cs_ne, z_new, N*1.818e-5) # scattering coefficient from rayleigh scattering
+m_coef = np.ones(len(dis_t))*np.e**(-0.15*(1/np.cos(theta[i])))
 
-for i in range(len(z)):
+for i in range(len(z_new)):
     I_final[i] = tflux[i]*m_coef[i] - tflux[i]*(r_coef[i]) # calculates flux observed at telescope
 
 plt.figure()
-plt.plot(dis_t, I_final[0])
+plt.plot(dis_t, I_final)
 plt.xlabel('Displacement from original beam path (m)')
 plt.ylabel('Intensity (W/m\u00b2)')
 
