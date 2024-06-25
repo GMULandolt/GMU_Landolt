@@ -9,8 +9,8 @@ start_time = time.time()
 # Load timescale
 ts = load.timescale()
 eastern = timezone('US/Eastern')
-seconds = 43200
-tscale = seconds
+seconds = 60*60
+tscale = seconds * 1000
 
 
 # Initialize satellite using SGP4
@@ -23,7 +23,7 @@ sat.sgp4init(
     0,           # bstar: drag coefficient (/earth radii)
     0,           # ndot: ballistic coefficient (radians/minute^2)
     0.0,             # nddot: second derivative of mean motion (radians/minute^3)
-    0.1,             # ecco: eccentricity
+    0.0,             # ecco: eccentricity
     0,               # argpo: argument of perigee (radians)
     0,               # inclo: inclination (radians)
     0,               # mo: mean anomaly (radians)
