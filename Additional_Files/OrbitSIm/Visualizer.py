@@ -3,7 +3,7 @@ from skyfield.api import load, EarthSatellite, wgs84
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from TLEconstructor import satcords, obscords, df
+from Working_Files.TLEconstructor import satcords, obscords, df
 
 
 # Frame rate for animation
