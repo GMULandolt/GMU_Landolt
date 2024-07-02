@@ -15,8 +15,9 @@ z = z*1e3
 t = np.linspace(0,len(z)-1,num=len(z)) # creates array of times incrementing by the same amount in the above data file
 w_z = np.zeros(len(z))
 FWHM = np.zeros(len(z))
-alt = np.pi/3 # altitude of satellite in sky at the center of the beam path
+alt = np.pi/2 # altitude of satellite in sky at the center of the beam path
 alt_loc = alt # altitude of satellite in sky at any given location
+beta = np.pi/2 # angle between the distance from the center of the beam path to the observatory and a line perpendicular to the beam path
 alpha = np.pi/2 - alt # angle a line perpendicular to the center of the beam path makes with a tangent line located at the center of the beam path
 
 flux_z = np.zeros(10000)
@@ -49,9 +50,9 @@ w_z = np.zeros(len(x))
 for j in range(len(x)):
     z_new[j] = (z[current_time]+(0.00008*x[j]))/np.cos(theta[j]) # amount of distance a given light ray travels factoring in the curvature of the earth
     if alt_loc <= alt: # identifies if observer is closer or further from the satellite using its relative altitude in the sky
-        z_new[j] = z_new[j] - x[j]*np.tan(alpha)
+        z_new[j] = z_new[j] - x[j]*np.tan(alpha)*np.sin(beta)
     else:
-        z_new[j] = z_new[j] + x[j]*np.tan(alpha)
+        z_new[j] = z_new[j] + x[j]*np.tan(alpha)*np.sin(beta)
     w_z[j] = w_0*np.sqrt(1+(z_new[j]/z_r)**2) # beam radius observed on earth's surface accounting for the curvature of earth
     flux_z[j] = I_0*((w_0/w_z[j])**2)*np.e**((-2*x[j]**2)/w_z[j]**2) # flux along one 2D slice of the 3D gaussian beam profile for different distances from the satellite in the center of the beam path
 
