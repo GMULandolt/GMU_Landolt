@@ -9,7 +9,7 @@ start_time = time.time()
 # Load timescale
 ts = load.timescale()
 eastern = timezone('US/Eastern')
-seconds = 60*60
+seconds = 60*1
 tscale = seconds * 1000
 
 
@@ -52,7 +52,7 @@ tempdf = np.zeros((num_chunks, 5, chunk_size), object)
 temptime = np.zeros((num_chunks, chunk_size), object)
 
 for i in range(num_chunks):
-   t = ts.utc(2024, 1, 1, 5, 0, np.arange(i*chunk_size, (i+1) * chunk_size))
+   t = ts.utc(2024, 1, 1, 5, 0, np.arange(i*chunk_size, (i+1) * chunk_size) * 0.001)
    timelist[i] = t
    temptime[i] = t.astimezone(eastern)
    
