@@ -27,10 +27,7 @@ from astropy.coordinates import SkyCoord, Longitude, Latitude, Angle
 from astropy import wcs as astropy_wcs
 from astroquery.hips2fits import conf
 
-
-# from ..OrbitSIm import *
-
-from ...Working_Files.flux_counts import *
+from flux_counts import *
 
 
 
