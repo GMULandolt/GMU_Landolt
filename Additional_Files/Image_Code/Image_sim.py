@@ -13,6 +13,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import urllib 
 import pandas as pd 
+import importlib
+
+
 
 from scipy.stats import norm
 from urllib.parse import urlencode
@@ -25,6 +28,9 @@ from astropy import wcs as astropy_wcs
 from astroquery.hips2fits import conf
 
 
+# from ..OrbitSIm import *
+
+from ...Working_Files.flux_counts import *
 
 
 
@@ -107,10 +113,6 @@ print ("INFO: SPACECRAFT DATA IMPORTED")
 #      'height': height
 # }
 
-
-
-
-
 #--------------------------------------------------------------------------------------------------------------------
 # HIPS2FITS QUERY FOR FITS FILE
 #--------------------------------------------------------------------------------------------------------------------
@@ -135,14 +137,14 @@ w = astropy_wcs.WCS(header={
 
 print ("INFO: WCS Header Created")
 
-result = hips2fits.query_with_wcs(
-    hips="CDS/P/2MASS/K",
-    wcs = w,
-    get_query_payload=False,
+# result = hips2fits.query_with_wcs(
+#     hips="CDS/P/2MASS/K",
+#     wcs = w,
+#     get_query_payload=False,
    
-)
+# )
 
-print ("INFO: Fits file imported")
+# print ("INFO: Fits file imported")
 
 
 #--------------------------------------------------------------------------------------------------------------------
@@ -150,7 +152,14 @@ print ("INFO: Fits file imported")
 #--------------------------------------------------------------------------------------------------------------------
 
 
-result.writeto("2MASS_FITS.fits",overwrite=True)
+# result.writeto("2MASS_FITS.fits",overwrite=True)
+
+#--------------------------------------------------------------------------------------------------------------------
+# FLUX COUNT IMPORTING
+#--------------------------------------------------------------------------------------------------------------------
+
+print(I_final)
+
 
 #--------------------------------------------------------------------------------------------------------------------
 # GRAB AND MODIFY FITS FILE
@@ -186,16 +195,17 @@ print ("INFO: Fits file modification complete")
 #--------------------------------------------------------------------------------------------------------------------
 
 
-gc = aplpy.FITSFigure(result)
-gc.show_colorscale(cmap='inferno')
-gc.show_contour(data=result,filled=False,cmap='inferno')
-#gc.show_rgb()
-#gc.show_markers(object_coords.ra, object_coords.dec, edgecolor='red',marker='s', s=50**2)              
-gc.save('2MASS_UNEDITED.png')
+
+# gc = aplpy.FITSFigure(result)
+# gc.show_colorscale(cmap='inferno')
+# gc.show_contour(data=result,filled=False,cmap='inferno')
+
+       
+# gc.save('2MASS_UNEDITED.png')
 
 
-gc1 = aplpy.FITSFigure(hdu11)
-gc1.show_colorscale(cmap='inferno')
-gc1.save('2MASS_FITS_MOD.png')
+# gc1 = aplpy.FITSFigure(hdu11)
+# gc1.show_colorscale(cmap='inferno')
+# gc1.save('2MASS_FITS_MOD.png')
 
-print ("INFO: PNGs Created! Closing code.")
+# print ("INFO: PNGs Created! Closing code.")
