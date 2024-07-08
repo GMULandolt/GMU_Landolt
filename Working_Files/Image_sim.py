@@ -13,8 +13,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import urllib 
 import pandas as pd 
-import importlib
-
 
 
 from scipy.stats import norm
@@ -40,8 +38,8 @@ queryrad = "0d1m0s"                #X(d)Y(m)Z(s)
 
 
 
-height    = 4096                   #Pixel image sizes
-width     = 4096
+height    = 1024                   #Pixel image sizes
+width     = 1024
 
 resolution1 = 10 # times arcmin   #zoom amount
 
@@ -54,7 +52,7 @@ def gaussian(x, mu, sig):
 
 
 #--------------------------------------------------------------------------------------------------------------------
-# SPACECRAFT DATA
+# SPACECRAFT DATA OLD
 #--------------------------------------------------------------------------------------------------------------------
 
 # 15 "/sec / 0.34 "/px = 44 px/s
@@ -77,6 +75,13 @@ yint  = np.round(y).astype(int)
 xint  = np.round(x).astype(int)
 yfrac = y - yint
 xfrac = x - xint
+
+#--------------------------------------------------------------------------------------------------------------------
+# SPACECRAFT DATA NEW
+#--------------------------------------------------------------------------------------------------------------------
+
+data = np.genfromtxt('satcoord.csv',delimiter=',',skip_header=1) # inputs data file
+
 
 print ("INFO: SPACECRAFT DATA IMPORTED")
 
@@ -134,14 +139,14 @@ w = astropy_wcs.WCS(header={
 
 print ("INFO: WCS Header Created")
 
-# result = hips2fits.query_with_wcs(
-#     hips="CDS/P/2MASS/K",
-#     wcs = w,
-#     get_query_payload=False,
+result = hips2fits.query_with_wcs(
+    hips="CDS/P/2MASS/K",
+    wcs = w,
+    get_query_payload=False,
    
-# )
+)
 
-# print ("INFO: Fits file imported")
+print ("INFO: Fits file imported")
 
 
 #--------------------------------------------------------------------------------------------------------------------
@@ -149,7 +154,7 @@ print ("INFO: WCS Header Created")
 #--------------------------------------------------------------------------------------------------------------------
 
 
-# result.writeto("2MASS_FITS.fits",overwrite=True)
+result.writeto("2MASS_FITS.fits",overwrite=True)
 
 #--------------------------------------------------------------------------------------------------------------------
 # FLUX COUNT IMPORTING
@@ -159,33 +164,40 @@ print(I_final)
 
 
 #--------------------------------------------------------------------------------------------------------------------
-# GRAB AND MODIFY FITS FILE
+# GRAB AND MODIFY FITS FILE OLD
 #--------------------------------------------------------------------------------------------------------------------
 
 #hdul3 = fits.getdata("TOI_5463.01_90.000s_R-0018_out.fits")
-hdul3 = fits.getdata("2MASS_FITS.fits")
+# hdul3 = fits.getdata("2MASS_FITS.fits")
 
-print ("INFO: Fits file grabbed for modification")
+# print ("INFO: Fits file grabbed for modification")
 
 
-data_frame = pd.DataFrame(hdul3)
-print(data_frame.shape)
+# data_frame = pd.DataFrame(hdul3)
+# print(data_frame.shape)
 
-for i in range(len(y)):
-	for j in range(-30,30):
-		for k in range(-30,30):	
-			if ((times[i] % dur) /dur < frac):
-				hdul3[1024+xint[i]+j,yint[i]+k] += (1.0+sunfrac)*countrate*step*gaussian(np.sqrt((j+xfrac[i])*(j+xfrac[i])+(k+yfrac[i])*(k+yfrac[i])),0,sigma)
-			else: 
-				hdul3[1024+xint[i]+j,yint[i]+k] += (0.0+sunfrac)*countrate*step*gaussian(np.sqrt((j+xfrac[i])*(j+xfrac[i])+(k+yfrac[i])*(k+yfrac[i])),0,sigma)
+# for i in range(len(y)):
+# 	for j in range(-30,30):
+# 		for k in range(-30,30):	
+# 			if ((times[i] % dur) /dur < frac):
+# 				hdul3[1024+xint[i]+j,yint[i]+k] += (1.0+sunfrac)*countrate*step*gaussian(np.sqrt((j+xfrac[i])*(j+xfrac[i])+(k+yfrac[i])*(k+yfrac[i])),0,sigma)
+# 			else: 
+# 				hdul3[1024+xint[i]+j,yint[i]+k] += (0.0+sunfrac)*countrate*step*gaussian(np.sqrt((j+xfrac[i])*(j+xfrac[i])+(k+yfrac[i])*(k+yfrac[i])),0,sigma)
 
-hdu1=fits.PrimaryHDU(hdul3)
+# hdu1=fits.PrimaryHDU(hdul3)
 
-hdu1.writeto('test.fits',overwrite=True)
+# hdu1.writeto('test.fits',overwrite=True)
 
-hdu11 = fits.open("test.fits")
+# hdu11 = fits.open("test.fits")
 
-print ("INFO: Fits file modification complete")
+# print ("INFO: Fits file modification complete")
+
+#--------------------------------------------------------------------------------------------------------------------
+# GRAB AND MODIFY FITS FILE NEW
+#--------------------------------------------------------------------------------------------------------------------
+
+
+
 
 #--------------------------------------------------------------------------------------------------------------------
 # PLOTTING FITS FILES
