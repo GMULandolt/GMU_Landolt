@@ -12,16 +12,15 @@ CODE FOR COMPUTING THE EXPECTED COUNTS AT A DETECTOR FROM THE LANDOLT SATELLITE 
 data = np.genfromtxt('satcoord.csv',delimiter=',',skip_header=1) # inputs data file
 z = data[:,5]
 z = z*1e3
-t = np.linspace(0,len(z)-1,num=len(z)) # creates array of times incrementing by the same amount in the above data file
+t = np.linspace(0,len(z)-1,num=len(z))*1e-3 # creates array of times incrementing in milliseconds
 w_z = np.zeros(len(z))
 FWHM = np.zeros(len(z))
-alt = np.pi/2 # altitude of satellite in sky at the center of the beam path
-alt_loc = alt # altitude of satellite in sky at any given location
+alt = data[0,4]*(np.pi/180) # altitude of satellite in sky at the center of the beam path
+alt_loc = data[:,4]*(np.pi/180) # array of altitudes of satellite in sky at any given location
 beta = np.pi/2 # angle between the distance from the center of the beam path to the observatory and a line perpendicular to the beam path
 alpha = np.pi/2 - alt # angle a line perpendicular to the center of the beam path makes with a tangent line located at the center of the beam path
+fob = 1 # frequency of blinking (in seconds)
 
-flux_z = np.zeros(10000)
-#flux_alt = np.zeros([len(alt),10000])
 ### VARIABLES ###
 
 MFD = 1e-5 # mode field diameter of optical fiber
@@ -31,22 +30,29 @@ lmbda_n = 0 # determines which laser is being looked at (0 - 488nm, 1 - 785nm, 2
 P_0 = [0.25, 0.1, 0.5, 0.1] # power of laser
 diam_t = 0.8128 # diameter of telescope
 a_t = np.pi*(diam_t/2)**2 # area that the telescope is able to take in light
-current_time = 12 # current time in units of the incriment value of that data file from the start of it
+current_time = 18 # current time in units of the incriment value of that data file from the start of it
+alt_loc = alt_loc[current_time] # altitude of satellite in sky at a given location at a given time (in radians)
 aod = 0.15 # aerosol optical depth
 airmass = (1/np.cos(alpha)) - 0.0018167*((1/np.cos(alpha))-1) - 0.002875*((1/np.cos(alpha))-1)**2 - 0.0008083*((1/np.cos(alpha))-1)**3 # airmass at a given altitude in the sky
+latitude = np.pi/4 # lattitude of observer
 
 ### CALCULATIONS ###
 
 I_0 = (2*P_0[lmbda_n])/(np.pi*w_0**2) # incident intensity of the laser
 z_r = (np.pi/lmbda[lmbda_n])*w_0**2 # raleigh range
+rad_vel = (2*np.pi)/86400 # rotational velocity of earth
+r = 6371000*np.sin((np.pi/2) - latitude) # distance from observer from the axis of rotation of earth
+vel = r*rad_vel # tangential velocity of the observer
 
 # calculates flux as a gaussian distribution for height above center of beam path given
 w_z0 = w_0*np.sqrt(1+(z[current_time]/z_r)**2) # beam radius at distance z
 FWHM = np.sqrt(2*np.log(2))*w_z0 # full width at half maximum of the beam profile for a given distance from the waist
-x = np.linspace(diam_t/2, w_z0,num=int(10000)) # the distance on one direction perpendicular to the direction of travel
-theta = np.linspace(np.arctan(x[0]/z[current_time]),np.arctan(max(x)/z[current_time]),num=10000) # angle made between the normal of earth's surface and a beam of light landing a given distance away from the normal
+x = np.arange(diam_t/2, w_z0, vel/1000) # the distance on one direction perpendicular to the direction of travel
+theta = np.linspace(np.arctan(x[0]/z[current_time]),np.arctan(max(x)/z[current_time]),num=len(x)) # angle made between the normal of earth's surface and a beam of light landing a given distance away from the normal
 z_new = np.zeros(len(x))
 w_z = np.zeros(len(x))
+flux_z = np.zeros(len(x))
+print('Loop Start')
 for j in range(len(x)):
     z_new[j] = (z[current_time]+(0.00008*x[j]))/np.cos(theta[j]) # amount of distance a given light ray travels factoring in the curvature of the earth
     if alt_loc <= alt: # identifies if observer is closer or further from the satellite using its relative altitude in the sky
@@ -55,8 +61,9 @@ for j in range(len(x)):
         z_new[j] = z_new[j] + x[j]*np.tan(alpha)*np.sin(beta)
     w_z[j] = w_0*np.sqrt(1+(z_new[j]/z_r)**2) # beam radius observed on earth's surface accounting for the curvature of earth
     flux_z[j] = I_0*((w_0/w_z[j])**2)*np.e**((-2*x[j]**2)/w_z[j]**2) # flux along one 2D slice of the 3D gaussian beam profile for different distances from the satellite in the center of the beam path
+print('Done!')
 
-dis_t = np.linspace(diam_t/2,w_z0,num=10000) # distance of telescope from center of beam
+dis_t = x # distance of telescope from center of beam
 
 tflux = np.zeros(len(dis_t))
 counts = np.zeros(len(dis_t))
@@ -72,8 +79,7 @@ for i in range(len(dis_t)):
     coeftemp = np.pi*(((diam_t/2) + dis_t[i])**2 - (-(diam_t/2) + dis_t[i])**2) / a_t # calculates fraction of distribution needed to be swept over to get an area a_t
     tflux[i] = tflux_temp[0]*(np.pi/coeftemp) # integrating over an angle that gives us an arclength of the diameter of the telescope
     counts[i] = (tflux[i]*lmbda[lmbda_n])/(6.62607015e-34*299792458) # total counts taken in
-    print('\r' + str(int(i/len(dis_t) * 10000)/100) + "%", end='', flush=True)
-print('Done!')
+print('\nDone!')
 
 """
 TELLURIC ABSORPTION
@@ -122,7 +128,7 @@ def r_coef(cs, d, N):
     scattering coefficient is found given the distance d from the satellite to the detector,
     and the amount of molecules N per cubic meter.
     """
-    r_coef = cs*d*N
+    r_coef = np.e**(-cs*N*d*(1/np.cos(theta)))
     return r_coef
 
 def mie_coef(lmbda, d, N):
@@ -146,49 +152,58 @@ def mie_coef(lmbda, d, N):
 N = 1e44 / (((4/3)*np.pi*(6371000 + z_new)**3) - (4/3)*np.pi*(6371000)**3)# average number of molecules that measured light passes per square meter
 
 # rayleigh scattering cross sections for 488 nm for the five most abundant gases in the atmosphere
-
-#cs_n2 = 7.26e-31
-#cs_o2 = 6.50e-31
-#cs_ar = 7.24e-31
-#cs_co2 = 23e-31
-#cs_ne = 0.33e-31
+if lmbda_n == 0:
+    cs_n2 = 7.26e-31
+    cs_o2 = 6.50e-31
+    cs_ar = 7.24e-31
+    cs_co2 = 23e-31
+    cs_ne = 0.33e-31
 
 # rayleigh scattering cross sections for 785 nm for the five most abundant gases in the atmosphere
-
-cs_n2 = 2.65e-31
-cs_o2 = 2.20e-31
-cs_ar = 2.38e-31
-cs_co2 = 6.22e-31
-cs_ne = 0.128e-31
+elif lmbda_n == 1:
+    cs_n2 = 2.65e-31
+    cs_o2 = 2.20e-31
+    cs_ar = 2.38e-31
+    cs_co2 = 6.22e-31
+    cs_ne = 0.128e-31
 
 # rayleigh scattering cross sections for 976nm for the five most abundant gases in the atmosphere
 # these values are extrapolated assuming a direct 1/lambda^4 relationship
-
-#cs_n2 = 4.54e-32
-#cs_o2 = 4.06e-32
-#cs_ar = 4.53e-32
-#cs_co2 = 1.44e-31
-#cs_ne = 2.06e-33
+elif lmbda_n == 2:
+    cs_n2 = 4.54e-32
+    cs_o2 = 4.06e-32
+    cs_ar = 4.53e-32
+    cs_co2 = 1.44e-31
+    cs_ne = 2.06e-33
 
 # rayleigh scattering cross sections for 1550nm for the five most abundant gases in the atmosphere
 # these values are extrapolated assuming a direct 1/lambda^4 relationship
-
-#cs_n2 = 7.13e-33
-#cs_o2 = 6.39e-33
-#cs_ar = 7.11e-33
-#cs_co2 = 2.26e-32
-#cs_ne = 3.24e-34
+else:
+    cs_n2 = 7.13e-33
+    cs_o2 = 6.39e-33
+    cs_ar = 7.11e-33
+    cs_co2 = 2.26e-32
+    cs_ne = 3.24e-34
 
 I_final = np.zeros(len(z_new))
-r_coef = r_coef(cs_n2, z_new, N*0.78084) + r_coef(cs_o2, z_new, N*0.20946) + r_coef(cs_ar, z_new, N*0.00934) + r_coef(cs_co2, z_new, N*0.000397) + r_coef(cs_ne, z_new, N*1.818e-5) # scattering coefficient from rayleigh scattering
-r_coef = r_coef*(1/np.cos(alpha)) # factoring in altitude
-m_coef = np.ones(len(dis_t))*np.e**(-aod*(1/np.cos(theta[i]))) # transmission coefficient from mie scattering
+r_coef1 = 1 - r_coef(cs_n2, z_new, N*0.78084) # scattering coefficient from rayleigh scattering for n2
+r_coef2 = 1 - r_coef(cs_o2, z_new, N*0.20946) # scattering coefficient from rayleigh scattering for o2
+r_coef3 = 1 - r_coef(cs_ar, z_new, N*0.00934) # scattering coefficient from rayleigh scattering for argon
+r_coef4 = 1 - r_coef(cs_co2, z_new, N*0.000397) # scattering coefficient from rayleigh scattering for co2
+r_coef5 = 1 - r_coef(cs_ne, z_new, N*1.818e-5) # scattering coefficient from rayleigh scattering for neon
+m_coef = 1 - np.ones(len(dis_t))*np.e**(-aod*(1/np.cos(theta))) # transmission coefficient from mie scattering
 
 for i in range(len(z_new)):
-    I_final[i] = tflux[i]*m_coef[i] - tflux[i]*r_coef[i]*airmass # calculates flux observed at telescope
+    I_final[i] = tflux[i] - tflux[i]*(m_coef[i]+r_coef1[i]+r_coef2[i]+r_coef3[i]+r_coef4[i]+r_coef5[i])*airmass # calculates flux observed at telescope
+    
+I_final = I_final[0:len(t)]
+# code for outputting the array of flux values
+heading = np.array('Flux (W/m^2)',dtype='str')
+data = np.genfromtxt('satcoord.csv',dtype='str',delimiter=',') # inputs data file
+I_final = np.asarray(I_final,dtype='str')
+I_final = np.insert(I_final[:],0,heading)
+output = np.column_stack((data,I_final))
+np.savetxt('satcoord_withflux.txt', output, fmt='%s')
 
-plt.figure()
-plt.plot(dis_t, I_final)
-plt.xlabel('Displacement from original beam path (m)')
-plt.ylabel('Intensity (W/m\u00b2)')
+
 
