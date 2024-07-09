@@ -6,6 +6,7 @@ import pandas as pd
 from pytz import timezone
 
 start_time = time.time()
+print("Simulating Sattelite Orbit...")
 # Load timescale
 ts = load.timescale()
 eastern = timezone('US/Eastern')
