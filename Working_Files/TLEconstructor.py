@@ -4,6 +4,7 @@ from sgp4.api import Satrec, WGS72
 from skyfield.api import load, EarthSatellite, wgs84
 import pandas as pd
 from pytz import timezone
+from settings import parameters
 
 start_time = time.time()
 print("Simulating Sattelite Orbit...")
@@ -20,18 +21,18 @@ sat.sgp4init(
     WGS72,           # gravity model
     'i',             # 'a' = old AFSPC mode, 'i' = improved mode
     1,               # satnum: Satellite number
-    0,               # epoch: days since 1949 December 31 00:00 UT
-    0,           # bstar: drag coefficient (/earth radii)
-    0,           # ndot: ballistic coefficient (radians/minute^2)
-    0.0,             # nddot: second derivative of mean motion (radians/minute^3)
-    0.0,             # ecco: eccentricity
-    0,               # argpo: argument of perigee (radians)
-    0,               # inclo: inclination (radians)
-    0,               # mo: mean anomaly (radians)
-    0.00437526951 ,  # no_kozai: mean motion (radians/minute) GEO
+    parameters.epoch,               # epoch: days since 1949 December 31 00:00 UT
+    parameters.bstar,           # bstar: drag coefficient (/earth radii)
+    parameters.ndot,           # ndot: ballistic coefficient (radians/minute^2)
+    parameters.nddot,             # nddot: second derivative of mean motion (radians/minute^3)
+    parameters.ecco,             # ecco: eccentricity
+    parameters.argpo,               # argpo: argument of perigee (radians)
+    parameters.inclo,               # inclo: inclination (radians)
+    parameters.mo,               # mo: mean anomaly (radians)
+    parameters.no_kozai,  # no_kozai: mean motion (radians/minute) GEO
 #    0.04908738521, #LEO
 #    0.00872664625, #meo
-    0                # nodeo: right ascension of ascending node (radians)
+    parameters.nodeo                # nodeo: right ascension of ascending node (radians)
 )
 
 # Convert Satrec object to EarthSatellite object
