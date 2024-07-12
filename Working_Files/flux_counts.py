@@ -20,6 +20,8 @@ alt_loc = data[:,4]*(np.pi/180) # array of altitudes of satellite in sky at any 
 beta = np.pi/2 # angle between the distance from the center of the beam path to the observatory and a line perpendicular to the beam path
 alpha = np.pi/2 - alt # angle a line perpendicular to the center of the beam path makes with a tangent line located at the center of the beam path
 fob = 1 # frequency of blinking (in seconds)
+t_efficiency = 1 # telescope efficiency
+t_inc = 1e-3 # increment of time in the file loaded in
 
 ### VARIABLES ###
 
@@ -186,6 +188,7 @@ else:
     cs_ne = 3.24e-34
 
 I_final = np.zeros(len(z_new))
+counts_final = np.zeros(len(z_new))
 r_coef1 = 1 - r_coef(cs_n2, z_new, N*0.78084) # scattering coefficient from rayleigh scattering for n2
 r_coef2 = 1 - r_coef(cs_o2, z_new, N*0.20946) # scattering coefficient from rayleigh scattering for o2
 r_coef3 = 1 - r_coef(cs_ar, z_new, N*0.00934) # scattering coefficient from rayleigh scattering for argon
@@ -194,15 +197,26 @@ r_coef5 = 1 - r_coef(cs_ne, z_new, N*1.818e-5) # scattering coefficient from ray
 m_coef = 1 - np.ones(len(dis_t))*np.e**(-aod*(1/np.cos(theta))) # transmission coefficient from mie scattering
 
 for i in range(len(z_new)):
-    I_final[i] = tflux[i] - tflux[i]*(m_coef[i]+r_coef1[i]+r_coef2[i]+r_coef3[i]+r_coef4[i]+r_coef5[i])*airmass # calculates flux observed at telescope
+    I_final[i] = (tflux[i] - tflux[i]*(m_coef[i]+r_coef1[i]+r_coef2[i]+r_coef3[i]+r_coef4[i]+r_coef5[i])*airmass)*t_efficiency # calculates flux observed at telescope
+    counts_final[i] = ((I_final[i]*lmbda[lmbda_n])/(6.62607015e-34*299792458))*t_efficiency # total counts taken in
+
+for i in range(int(fob/1e-3)):
+    I_final[i::2*int(fob/1e-3)] = 0
+    
     
 I_final = I_final[0:len(t)]
+counts_final = counts_final[0:len(t)]
+
 # code for outputting the array of flux values
-heading = np.array('Flux (W/m^2)',dtype='str')
+heading = np.array('Radiant Flux (W)',dtype='str')
+heading2 = np.array('Counts (counts/m^2)')
 data = np.genfromtxt('satcoord.csv',dtype='str',delimiter=',') # inputs data file
 I_final = np.asarray(I_final,dtype='str')
+counts_final = np.asarray(counts_final,dtype='str')
 I_final = np.insert(I_final[:],0,heading)
+counts_final = np.insert(counts_final[:],0,heading2)
 output = np.column_stack((data,I_final))
+output = np.column_stack((data,counts_final))
 np.savetxt('satcoord_withflux.txt', output, fmt='%s')
 
 
