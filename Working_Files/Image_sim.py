@@ -25,7 +25,7 @@ from astropy.coordinates import SkyCoord, Longitude, Latitude, Angle
 from astropy import wcs as astropy_wcs
 from astroquery.hips2fits import conf
 
-from flux_counts import *
+# from flux_counts import *
 
 
 
@@ -33,9 +33,7 @@ from flux_counts import *
 # INPUTS
 #--------------------------------------------------------------------------------------------------------------------
 
-Database = 'DSS'                 #2MASS, DSS
-queryrad = "0d1m0s"                #X(d)Y(m)Z(s)
-
+Database = '2MASS'                #2MASS, DSS
 
 
 height    = 1024                   #Pixel image sizes
@@ -82,8 +80,22 @@ xfrac = x - xint
 
 data = np.genfromtxt('satcoord.csv',delimiter=',',skip_header=1) # inputs data file
 
+TimeEST = data[:,0]
+RA      = data[:,1]
+Dec     = data[:,2]
+Az      = data[:,3]
+Alt     = data[:,4]
+Dist    = data[:,5]
+R_Flux  = data[:,6]
+Count1  = data[:,7]
+
+print(RA)
+print(Dec)
 
 print ("INFO: SPACECRAFT DATA IMPORTED")
+
+RA_import = RA[30000]
+Dec_import = Dec[30000]
 
 #--------------------------------------------------------------------------------------------------------------------
 # SIMBAD REGION QUERY
@@ -120,27 +132,44 @@ print ("INFO: SPACECRAFT DATA IMPORTED")
 #--------------------------------------------------------------------------------------------------------------------
 
 
+
 w = astropy_wcs.WCS(header={
 	'BITPIX': 16,
-    'NAXIS1': height,         # Width of the output fits/image
-    'NAXIS2': width,         # Height of the output fits/image
     'WCSAXES': 2,           # Number of coordinate axes
-    'CRPIX1': 1024.0,       # Pixel coordinate of reference point
-    'CRPIX2': 1024.0,        # Pixel coordinate of reference point
-    'CDELT1': -0.00001,        # [deg] Coordinate increment at reference point
-    'CDELT2': 0.00001,         # [deg] Coordinate increment at reference point
-    'CUNIT1': 'deg',        # Units of coordinate increment and value
-    'CUNIT2': 'deg',        # Units of coordinate increment and value
-    'CTYPE1': 'GLON-MOL',   # galactic longitude, Mollweide's projection
-    'CTYPE2': 'GLAT-MOL',   # galactic latitude, Mollweide's projection
-    'CRVAL1': 0.0,          # [deg] Coordinate value at reference point
-    'CRVAL2': 0.0,          # [deg] Coordinate value at reference point
+    'CTYPE1': 'RA---TAN', 
+    'CUNIT1': 'deg', 
+    'CDELT1': -0.0002777777778,        # [deg] Coordinate increment at reference point
+    'CRPIX1': 512, 
+    'CRVAL1': RA_import,
+    'NAXIS1': height,
+    'CTYPE2': 'DEC--TAN', 
+    'CUNIT2': 'deg', 
+    'CDELT2': 0.0002777777778, 
+    'CRPIX2': 512, 
+    'CRVAL2': Dec_import, 
+    'NAXIS2': width
 })
+
+
+wcs_input_dict = {
+    'CTYPE1': 'RA---TAN', 
+    'CUNIT1': 'deg', 
+    'CDELT1': -0.0002777777778, 
+    'CRPIX1': 1, 
+    'CRVAL1': RA_import, 
+    'NAXIS1': height,
+    'CTYPE2': 'DEC--TAN', 
+    'CUNIT2': 'deg', 
+    'CDELT2': 0.0002777777778, 
+    'CRPIX2': 1, 
+    'CRVAL2': Dec_import, 
+    'NAXIS2': width
+}
 
 print ("INFO: WCS Header Created")
 
 result = hips2fits.query_with_wcs(
-    hips="CDS/P/2MASS/K",
+    hips="CDS/P/{}/K".format(Database),
     wcs = w,
     get_query_payload=False,
    
@@ -156,11 +185,57 @@ print ("INFO: Fits file imported")
 
 result.writeto("2MASS_FITS.fits",overwrite=True)
 
+
+
+# hdul = fits.open("2MASS_FITS.fits")
+# image = hdul[0].data
+# plt.imshow(image)
+# hdul.info()
+
+# wcs2 = astropy_wcs.WCS(header=hdul[0].header)
+# ax = plt.subplot(projection=wcs2)
+# im = ax.imshow(image)
+# plt.colorbar(im)
+
+# dec_ll, ra_ll = Dec[0], RA[0]
+# dec_ur, ra_ur = Dec[59999], RA[59999]
+
+# (xmin, xmax), (ymin, ymax) = wcs2.all_world2pix([ra_ll, ra_ur], [dec_ll, dec_ur], 0)
+# (xmin, xmax), (ymin, ymax)
+
+# xmin_int, xmax_int = int(np.floor(xmin)), int(np.ceil(xmax))
+# ymin_int, ymax_int = int(np.floor(ymin)), int(np.ceil(ymax))
+# (xmin_int, xmax_int), (ymin_int, ymax_int)
+# subregion = image[ymin_int:ymax_int,xmin_int:xmax_int]
+
+# ax = plt.subplot(projection=wcs2)
+# im = ax.imshow(subregion)
+# plt.colorbar(im)
+# ax.set(xlim=(xmin, xmax), ylim=(ymin, ymax))
+
+
+
+
 #--------------------------------------------------------------------------------------------------------------------
-# FLUX COUNT IMPORTING
+#
 #--------------------------------------------------------------------------------------------------------------------
 
-print(I_final)
+
+wcs_helix_dict = astropy_wcs.WCS(wcs_input_dict)
+
+header_data_unit_list = fits.open("2MASS_FITS.fits")
+
+header_data_unit_list.info()
+
+image1 = header_data_unit_list[0].data
+
+header1 =header_data_unit_list[0].header
+
+print(header1)
+
+wcs_helix = astropy_wcs.WCS(header1)
+
+print(wcs_helix)
 
 
 #--------------------------------------------------------------------------------------------------------------------
@@ -168,9 +243,9 @@ print(I_final)
 #--------------------------------------------------------------------------------------------------------------------
 
 #hdul3 = fits.getdata("TOI_5463.01_90.000s_R-0018_out.fits")
-# hdul3 = fits.getdata("2MASS_FITS.fits")
+hdul3 = fits.getdata("2MASS_FITS.fits")
 
-# print ("INFO: Fits file grabbed for modification")
+print ("INFO: Fits file grabbed for modification")
 
 
 # data_frame = pd.DataFrame(hdul3)
@@ -190,15 +265,37 @@ print(I_final)
 
 # hdu11 = fits.open("test.fits")
 
-# print ("INFO: Fits file modification complete")
+
 
 #--------------------------------------------------------------------------------------------------------------------
 # GRAB AND MODIFY FITS FILE NEW
 #--------------------------------------------------------------------------------------------------------------------
 
+fig = plt.figure(figsize=(10, 10), frameon=False)
+ax = plt.subplot(projection=wcs_helix)
+ax.arrow(RA[0], Dec[0], (RA[60000-1]-RA[0]), (Dec[60000-1]-Dec[0]), 
+         head_width=0, head_length=0, 
+         fc='orange', ec='orange', width=0.0003, 
+         transform=ax.get_transform('icrs'))
+ax.arrow(RA[30000-1], Dec[30000-1], 0, -0.1, 
+         head_width=0, head_length=0, 
+         fc='red', ec='red', width=0.003, 
+         transform=ax.get_transform('icrs'))
+plt.text(RA[30000-1], -4.075, '0.1 deg', 
+         color='white', rotation=90, 
+         transform=ax.get_transform('icrs'))
+plt.imshow(image1, origin='lower', cmap='cividis', aspect='equal')
+
+overlay = ax.get_coords_overlay('galactic')
+overlay.grid(color='white', ls='dotted')
+plt.xlabel(r'RA')
+plt.ylabel(r'Dec')
+
+plt.savefig("Image_sim.png")
+plt.show()
 
 
-
+print ("INFO: Fits file modification complete")
 #--------------------------------------------------------------------------------------------------------------------
 # PLOTTING FITS FILES
 #--------------------------------------------------------------------------------------------------------------------
