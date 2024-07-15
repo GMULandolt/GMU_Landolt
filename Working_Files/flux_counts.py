@@ -22,6 +22,7 @@ alpha = np.pi/2 - alt # angle a line perpendicular to the center of the beam pat
 fob = 1 # frequency of blinking (in seconds)
 t_efficiency = 1 # telescope efficiency
 t_inc = 1e-3 # increment of time in the file loaded in
+d0 = 0 # distance of observer from center of beam path
 
 ### VARIABLES ###
 
@@ -33,7 +34,6 @@ P_0 = [0.25, 0.1, 0.5, 0.1] # power of laser
 diam_t = 0.8128 # diameter of telescope
 a_t = np.pi*(diam_t/2)**2 # area that the telescope is able to take in light
 current_time = 18 # current time in units of the incriment value of that data file from the start of it
-alt_loc = alt_loc[current_time] # altitude of satellite in sky at a given location at a given time (in radians)
 aod = 0.15 # aerosol optical depth
 airmass = (1/np.cos(alpha)) - 0.0018167*((1/np.cos(alpha))-1) - 0.002875*((1/np.cos(alpha))-1)**2 - 0.0008083*((1/np.cos(alpha))-1)**3 # airmass at a given altitude in the sky
 latitude = np.pi/4 # lattitude of observer
@@ -46,10 +46,14 @@ rad_vel = (2*np.pi)/86400 # rotational velocity of earth
 r = 6371000*np.sin((np.pi/2) - latitude) # distance from observer from the axis of rotation of earth
 vel = r*rad_vel # tangential velocity of the observer
 
+if d0 == 0:
+    d0 = diam_t/2 # fixes error where starting at zero creates invalid variables
+
 # calculates flux as a gaussian distribution for height above center of beam path given
 w_z0 = w_0*np.sqrt(1+(z[current_time]/z_r)**2) # beam radius at distance z
 FWHM = np.sqrt(2*np.log(2))*w_z0 # full width at half maximum of the beam profile for a given distance from the waist
-x = np.arange(diam_t/2, w_z0, vel/1000) # the distance on one direction perpendicular to the direction of travel
+x = np.arange(d0, w_z0, vel/1000) # the distance on one direction perpendicular to the direction of travel
+x = x[:len(t)] # cuts out extraneous variables that goes beyond the scope of the original data file
 theta = np.linspace(np.arctan(x[0]/z[current_time]),np.arctan(max(x)/z[current_time]),num=len(x)) # angle made between the normal of earth's surface and a beam of light landing a given distance away from the normal
 z_new = np.zeros(len(x))
 w_z = np.zeros(len(x))
@@ -57,7 +61,7 @@ flux_z = np.zeros(len(x))
 print('Loop Start')
 for j in range(len(x)):
     z_new[j] = (z[current_time]+(0.00008*x[j]))/np.cos(theta[j]) # amount of distance a given light ray travels factoring in the curvature of the earth
-    if alt_loc <= alt: # identifies if observer is closer or further from the satellite using its relative altitude in the sky
+    if alt_loc[j] <= alt: # identifies if observer is closer or further from the satellite using its relative altitude in the sky
         z_new[j] = z_new[j] - x[j]*np.tan(alpha)*np.sin(beta)
     else:
         z_new[j] = z_new[j] + x[j]*np.tan(alpha)*np.sin(beta)
@@ -202,6 +206,7 @@ for i in range(len(z_new)):
 
 for i in range(int(fob/1e-3)):
     I_final[i::2*int(fob/1e-3)] = 0
+    counts_final[i::2*int(fob/1e-3)] = 0
     
     
 I_final = I_final[0:len(t)]
@@ -209,15 +214,15 @@ counts_final = counts_final[0:len(t)]
 
 # code for outputting the array of flux values
 heading = np.array('Radiant Flux (W)',dtype='str')
-heading2 = np.array('Counts (counts/m^2)')
+heading2 = np.array('Counts')
 data = np.genfromtxt('satcoord.csv',dtype='str',delimiter=',') # inputs data file
 I_final = np.asarray(I_final,dtype='str')
 counts_final = np.asarray(counts_final,dtype='str')
 I_final = np.insert(I_final[:],0,heading)
 counts_final = np.insert(counts_final[:],0,heading2)
 output = np.column_stack((data,I_final))
-output = np.column_stack((data,counts_final))
-np.savetxt('satcoord_withflux.txt', output, fmt='%s')
+output = np.column_stack((output,counts_final))
+np.savetxt('satcoord.csv', output, fmt='%s', delimiter=',')
 
 
 
