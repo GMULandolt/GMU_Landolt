@@ -20,8 +20,12 @@ class Settings:
              "nodeo": 0,
              "timezone": 'US/Eastern',
              "start": "2000-01-01 00:00:00",
-             "end": "2000-01-01 00:00:01",
-             "tdelta": 1}
+             "end": "2000-01-01 00:00:1",
+             "lat": 38.8282,
+             "lon": -77.3053,
+             "elev": 140,
+             "tdelta": 10,
+             "chunks": 100}
 
         for k, v in d.items():
             setattr(self, k, v) 
@@ -31,9 +35,15 @@ class Settings:
         for key, value in variables.items():
             setattr(self, key, value)
         
-        stimes = re.split(self.start)
-        setattr(self, "start", datetime(2014, 1, 18, 1, 35, 37.5))
-        etimes = re.split(self.end)
-        setattr(self, "end", self.end)
+        stimes = re.split("[-\s:]", self.start)
+        itimes = [int(i) for i in stimes]
+        time = datetime(itimes[0], itimes[1], itimes[2], itimes[3], itimes[4], itimes[5])
+        time = ts.from_datetime(timezone(self.timezone).localize(time))
+        setattr(self, "start", time)
+        stimes = re.split("[-\s:]", self.end)
+        itimes = [int(i) for i in stimes]
+        time = datetime(itimes[0], itimes[1], itimes[2], itimes[3], itimes[4], itimes[5])
+        time = ts.from_datetime(timezone(self.timezone).localize(time))
+        setattr(self, "end", time)
 
 parameters = Settings()

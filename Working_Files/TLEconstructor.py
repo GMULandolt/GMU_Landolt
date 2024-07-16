@@ -10,9 +10,7 @@ start_time = time.time()
 print("Simulating Sattelite Orbit...")
 # Load timescale
 ts = load.timescale()
-eastern = timezone('US/Eastern')
-seconds = 60*1
-tscale = seconds * 1000
+tscale = int((parameters.end - parameters.start) * 24 * 60 * 60 * 1000 + 1)
 
 
 # Initialize satellite using SGP4
@@ -39,24 +37,29 @@ sat.sgp4init(
 sat = EarthSatellite.from_satrec(sat, ts)
 
 # Define the location of GMU Observatory
-obs = wgs84.latlon(38.8282, -77.3053, 140)
+obs = wgs84.latlon(parameters.lat, parameters.lon, parameters.elev)
 # Vector between sat and obs
 difference = sat - obs
 
 
 
-chunk_size = 100
+chunk_size = parameters.tdelta * parameters.chunks
 num_chunks = int(tscale/chunk_size)
-satcords = np.zeros((num_chunks, 3, chunk_size), object)
-obscords = np.zeros((num_chunks, 3, chunk_size), object)
-timelist = np.zeros((num_chunks, chunk_size), object)
-tempdf = np.zeros((num_chunks, 5, chunk_size), object)
-temptime = np.zeros((num_chunks, chunk_size), object)
+satcords = np.zeros((num_chunks, 3, int(chunk_size / parameters.tdelta)), object)
+obscords = np.zeros((num_chunks, 3, int(chunk_size / parameters.tdelta)), object)
+timelist = np.zeros((num_chunks, int(chunk_size / parameters.tdelta)), object)
+tempdf = np.zeros((num_chunks, 5, int(chunk_size / parameters.tdelta)), object)
+temptime = np.zeros((num_chunks, int(chunk_size / parameters.tdelta)), object)
 
 for i in range(num_chunks):
-   t = ts.utc(2024, 1, 1, 5, 0, np.arange(i*chunk_size, (i+1) * chunk_size) * 0.001)
+   t = ts.utc(parameters.start.utc.year, \
+              parameters.start.utc.month, \
+              parameters.start.utc.day, \
+              parameters.start.utc.hour, \
+              parameters.start.utc.minute, \
+              parameters.start.utc.second + np.arange(i*chunk_size, (i+1) * chunk_size, parameters.tdelta) * 0.001)
    timelist[i] = t
-   temptime[i] = t.astimezone(eastern)
+   temptime[i] = t.astimezone(timezone(parameters.timezone))
    
    
    satcord = sat.at(t)
