@@ -32,7 +32,8 @@ sat.sgp4init(
 #    0.00872664625, #meo
     parameters.nodeo                # nodeo: right ascension of ascending node (radians)
 )
-
+if (parameters.tle1 != "NA" or parameters.tle2 != "NA"):
+    sat = Satrec.twoline2rv(parameters.tle1, parameters.tle2)
 # Convert Satrec object to EarthSatellite object
 sat = EarthSatellite.from_satrec(sat, ts)
 

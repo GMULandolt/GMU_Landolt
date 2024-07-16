@@ -25,7 +25,9 @@ class Settings:
              "lon": -77.3053,
              "elev": 140,
              "tdelta": 10,
-             "chunks": 100}
+             "chunks": 100,
+             "tle1": "NA",
+             "tle2": "NA"}
 
         for k, v in d.items():
             setattr(self, k, v) 
