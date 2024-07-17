@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.special import wofz
 from scipy.integrate import quad
+from settings import parameters
 
 
 """
@@ -11,46 +12,45 @@ CODE FOR COMPUTING THE EXPECTED COUNTS AT A DETECTOR FROM THE LANDOLT SATELLITE 
 data = np.genfromtxt('satcoord.csv',delimiter=',',skip_header=1) # inputs data file
 z = data[:,5]
 z = z*1e3
-t = np.linspace(0,len(z)-1,num=len(z))*1e-3 # creates array of times incrementing in milliseconds
+tdelta = parameters.tdelta # increment of time in the file loaded in
+t = np.linspace(0,len(z)-1,num=len(z))*tdelta # creates array of times incrementing with t=tdelta
 w_z = np.zeros(len(z))
 FWHM = np.zeros(len(z))
 error_p = np.zeros(len(z))
 alt = data[:,4]*(np.pi/180) # altitude of satellite in sky at the center of the beam path
 alt_loc = data[0,4]*(np.pi/180) # altitude of satellite in sky at any given location
-beta = np.pi/2 # angle between the distance from the center of the beam path to the observatory and a line perpendicular to the beam path
+lat_cbp = float(parameters.lat)*(np.pi/180) # latitude of the center of the beam path in radians
+lat_loc = float(parameters.lat_loc)*(np.pi/180) # latitude of observer in radians
+d0 = float(parameters.d0) # distance of observer from center of beam path
+vert_d = 6371000*(abs(lat_cbp-lat_loc)) # vertical distance between center of the beam path and observer using the volumetric mean radius of earth
 alpha = np.pi/2 - alt # angle a line perpendicular to the center of the beam path makes with a tangent line located at the center of the beam path
 fob = 1 # frequency of blinking (in seconds)
-t_efficiency = 1 # telescope efficiency
-t_inc = 1e-3 # increment of time in the file loaded in
-d0 = 0 # distance of observer from center of beam path
+t_efficiency = float(parameters.t_eff) # telescope efficiency
 
 ### VARIABLES ###
 
 MFD = 1e-5 # mode field diameter of optical fiber
 w_0 = MFD/2 # waist radius of the gaussian beam
 lmbda = [488e-9, 785e-9, 976e-9, 1550e-9] # wavelength of laser
-lmbda_n = 0 # determines which laser is being looked at (0 - 488nm, 1 - 785nm, 2 - 976nm, 3 - 1550nm)
+lmbda_n = int(parameters.n) # determines which laser is being looked at (0 - 488nm, 1 - 785nm, 2 - 976nm, 3 - 1550nm)
 P_0 = [0.25, 0.1, 0.5, 0.1] # power of laser
-diam_t = 0.8128 # diameter of telescope
+diam_t = float(parameters.t_diam) # diameter of telescope
 a_t = np.pi*(diam_t/2)**2 # area that the telescope is able to take in light
-current_time = 18 # current time in units of the incriment value of that data file from the start of it
 aod = 0.15 # aerosol optical depth
 airmass = (1/np.cos(alpha)) - 0.0018167*((1/np.cos(alpha))-1) - 0.002875*((1/np.cos(alpha))-1)**2 - 0.0008083*((1/np.cos(alpha))-1)**3 # airmass at a given altitude in the sky
-latitude = np.pi/4 # lattitude of observer
+
+if d0 < diam_t/2:
+    d0 = diam_t/2 # fixes error where starting at zero creates invalid variables, sets distance from center of the beam path to the radius of the telescope at the very minimum
+    
+beta = vert_d/d0 # angle between the distance from the center of the beam path to the observatory and a line perpendicular to the beam path
 
 ### CALCULATIONS ###
 
 I_0 = (2*P_0[lmbda_n])/(np.pi*w_0**2) # incident intensity of the laser
 z_r = (np.pi/lmbda[lmbda_n])*w_0**2 # raleigh range
-rad_vel = (2*np.pi)/86400 # rotational velocity of earth
-r = 6371000*np.sin((np.pi/2) - latitude) # distance from observer from the axis of rotation of earth
-vel = r*rad_vel # tangential velocity of the observer
-
-if d0 == 0:
-    d0 = diam_t/2 # fixes error where starting at zero creates invalid variables
 
 # calculates flux as a gaussian distribution for height above center of beam path given
-w_z0 = w_0*np.sqrt(1+(z[current_time]/z_r)**2) # beam radius at distance z
+w_z0 = w_0*np.sqrt(1+(z[0]/z_r)**2) # beam radius at distance z
 FWHM = np.sqrt(2*np.log(2))*w_z0 # full width at half maximum of the beam profile for a given distance from the waist
 x = np.arange(d0 - diam_t/2, d0 + diam_t/2, 0.0001) # the distance on one direction perpendicular to the laser vector
 theta = np.arctan(d0/z) # angle made between the normal of earth's surface and a beam of light landing a given distance away from the normal
@@ -197,6 +197,7 @@ counts_final = counts_final[0:len(t)]
 heading = np.array('Radiant Flux (W)',dtype='str')
 heading2 = np.array('Counts')
 data = np.genfromtxt('satcoord.csv',dtype='str',delimiter=',') # inputs data file
+data = data[:,:6]
 I_final = np.asarray(I_final,dtype='str')
 counts_final = np.asarray(counts_final,dtype='str')
 I_final = np.insert(I_final[:],0,heading)
