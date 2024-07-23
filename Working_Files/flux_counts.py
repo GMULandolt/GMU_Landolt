@@ -11,7 +11,7 @@ CODE FOR COMPUTING THE EXPECTED COUNTS AT A DETECTOR FROM THE LANDOLT SATELLITE 
 
 data = np.genfromtxt('satcoord.csv',delimiter=',',skip_header=1) # inputs data file
 z = data[:,5]
-z = z*1e3
+z = z*1e3 # changes units of distance to meters from kilometers
 tdelta = parameters.tdelta # increment of time in the file loaded in
 t = np.linspace(0,len(z)-1,num=len(z))*tdelta # creates array of times incrementing with t=tdelta
 w_z = np.zeros(len(z))
@@ -19,10 +19,7 @@ FWHM = np.zeros(len(z))
 error_p = np.zeros(len(z))
 alt = data[:,4]*(np.pi/180) # altitude of satellite in sky at the center of the beam path
 alt_loc = data[0,4]*(np.pi/180) # altitude of satellite in sky at any given location
-lat_cbp = float(parameters.lat)*(np.pi/180) # latitude of the center of the beam path in radians
-lat_loc = float(parameters.lat_loc)*(np.pi/180) # latitude of observer in radians
 d0 = float(parameters.d0) # distance of observer from center of beam path
-vert_d = 6371000*(abs(lat_cbp-lat_loc)) # vertical distance between center of the beam path and observer using the volumetric mean radius of earth
 alpha = np.pi/2 - alt # angle a line perpendicular to the center of the beam path makes with a tangent line located at the center of the beam path
 fob = 1 # frequency of blinking (in seconds)
 t_efficiency = float(parameters.t_eff) # telescope efficiency
@@ -42,7 +39,7 @@ airmass = (1/np.cos(alpha)) - 0.0018167*((1/np.cos(alpha))-1) - 0.002875*((1/np.
 if d0 < diam_t/2:
     d0 = diam_t/2 # fixes error where starting at zero creates invalid variables, sets distance from center of the beam path to the radius of the telescope at the very minimum
     
-beta = vert_d/d0 # angle between the distance from the center of the beam path to the observatory and a line perpendicular to the beam path
+beta = float(parameters.beta) # angle between the distance from the center of the beam path to the observatory and a line perpendicular to the beam path
 
 ### CALCULATIONS ###
 
@@ -63,7 +60,7 @@ for j in range(len(t)):
     if alt_loc <= alt[j]: # identifies if observer is closer or further from the satellite using its relative altitude in the sky
         z_new[j] = z_new[j] - d0*np.tan(alpha[j])*np.sin(beta)
     else:
-        z_new[j] = z_new[j] + d0*np.tan(alpha)*np.sin(beta)
+        z_new[j] = z_new[j] + d0*np.tan(alpha[j])*np.sin(beta)
     w_z[j] = w_0*np.sqrt(1+(z_new[j]/z_r)**2) # beam radius observed on earth's surface accounting for the curvature of earth
     flux_z[j] = I_0*((w_0/w_z[j])**2)*np.e**((-2*d0**2)/w_z[j]**2) # flux along one 2D slice of the 3D gaussian beam profile for different distances from the satellite in the center of the beam path
 print('Done!')
