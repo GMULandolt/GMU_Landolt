@@ -1,0 +1,17 @@
+runtime: python39
+
+handlers:
+  
+- url: /static
+  static_dir: static
+
+- url : /ws/.*
+  secure: always
+  script: auto
+
+- url : /(.*)
+  static_files: web/\1
+  upload: web/.*
+
+
+
