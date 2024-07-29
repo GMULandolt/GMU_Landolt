@@ -33,7 +33,7 @@ from astroquery.hips2fits import conf
 # INPUTS
 #--------------------------------------------------------------------------------------------------------------------
 
-Database = '2MASS'                #2MASS, DSS
+Database = 'CDS/P/2MASS/K'        #Hips2fits database
 
 
 height    = 1024                   #Pixel image sizes
@@ -55,24 +55,24 @@ def gaussian(x, mu, sig):
 
 # 15 "/sec / 0.34 "/px = 44 px/s
 # 3 "/sec / 0.34 "/px = 9 px/s
-xrate     = 9           # px/s
-yrate     = 44          # px/s
-countrate = 3554
-step      = 0.1          # time step
-seeing    = 9            # px FWHM
-sunfrac   = 0.0          # intensity of reflected sunlight to laser light from spacecraft
-frac      = 0.25         # fraction of laser cycle on
-dur       = 2.0          # laser cycle duration in seconds
-sigma     = seeing /2.355
-times     = np.arange(1,91,step)
+# xrate     = 9           # px/s
+# yrate     = 44          # px/s
+# countrate = 3554
+# step      = 0.1          # time step
+# seeing    = 9            # px FWHM
+# sunfrac   = 0.0          # intensity of reflected sunlight to laser light from spacecraft
+# frac      = 0.25         # fraction of laser cycle on
+# dur       = 2.0          # laser cycle duration in seconds
+# sigma     = seeing /2.355
+# times     = np.arange(1,91,step)
 
 
-y     = yrate * times
-x     = xrate * times
-yint  = np.round(y).astype(int)
-xint  = np.round(x).astype(int)
-yfrac = y - yint
-xfrac = x - xint
+# y     = yrate * times
+# x     = xrate * times
+# yint  = np.round(y).astype(int)
+# xint  = np.round(x).astype(int)
+# yfrac = y - yint
+# xfrac = x - xint
 
 #--------------------------------------------------------------------------------------------------------------------
 # SPACECRAFT DATA NEW
@@ -87,16 +87,29 @@ Az      = data[:,3]
 Alt     = data[:,4]
 Dist    = data[:,5]
 R_Flux  = data[:,6]
-Count1  = data[:,7]
+Count   = data[:,7]
 
 print(RA)
 print(Dec)
 
+def find_middle(lst):
+    length = len(lst)  # Get the length of the list
+ 
+    if length % 2 != 0:  # Check if the length is odd
+        middle_index = length // 2
+        return lst[middle_index]
+    else:
+        second_middle_index = length // 2
+        return lst[second_middle_index]
+
+    
+
+RA_import = find_middle(RA)
+Dec_import = find_middle(Dec)
+
+print(len(data))
+
 print ("INFO: SPACECRAFT DATA IMPORTED")
-
-RA_import = RA[30000]
-Dec_import = Dec[30000]
-
 #--------------------------------------------------------------------------------------------------------------------
 # SIMBAD REGION QUERY
 #--------------------------------------------------------------------------------------------------------------------
@@ -169,7 +182,7 @@ wcs_input_dict = {
 print ("INFO: WCS Header Created")
 
 result = hips2fits.query_with_wcs(
-    hips="CDS/P/{}/K".format(Database),
+    hips=Database,
     wcs = w,
     get_query_payload=False,
    
@@ -185,43 +198,12 @@ print ("INFO: Fits file imported")
 
 result.writeto("2MASS_FITS.fits",overwrite=True)
 
-
-
-# hdul = fits.open("2MASS_FITS.fits")
-# image = hdul[0].data
-# plt.imshow(image)
-# hdul.info()
-
-# wcs2 = astropy_wcs.WCS(header=hdul[0].header)
-# ax = plt.subplot(projection=wcs2)
-# im = ax.imshow(image)
-# plt.colorbar(im)
-
-# dec_ll, ra_ll = Dec[0], RA[0]
-# dec_ur, ra_ur = Dec[59999], RA[59999]
-
-# (xmin, xmax), (ymin, ymax) = wcs2.all_world2pix([ra_ll, ra_ur], [dec_ll, dec_ur], 0)
-# (xmin, xmax), (ymin, ymax)
-
-# xmin_int, xmax_int = int(np.floor(xmin)), int(np.ceil(xmax))
-# ymin_int, ymax_int = int(np.floor(ymin)), int(np.ceil(ymax))
-# (xmin_int, xmax_int), (ymin_int, ymax_int)
-# subregion = image[ymin_int:ymax_int,xmin_int:xmax_int]
-
-# ax = plt.subplot(projection=wcs2)
-# im = ax.imshow(subregion)
-# plt.colorbar(im)
-# ax.set(xlim=(xmin, xmax), ylim=(ymin, ymax))
-
-
-
-
 #--------------------------------------------------------------------------------------------------------------------
-#
+
 #--------------------------------------------------------------------------------------------------------------------
 
 
-wcs_helix_dict = astropy_wcs.WCS(wcs_input_dict)
+wcs_landolt_dict = astropy_wcs.WCS(wcs_input_dict)
 
 header_data_unit_list = fits.open("2MASS_FITS.fits")
 
@@ -233,66 +215,88 @@ header1 =header_data_unit_list[0].header
 
 print(header1)
 
-wcs_helix = astropy_wcs.WCS(header1)
+wcs_landolt = astropy_wcs.WCS(header1)
 
-print(wcs_helix)
+print(wcs_landolt)
 
 
 #--------------------------------------------------------------------------------------------------------------------
 # GRAB AND MODIFY FITS FILE OLD
 #--------------------------------------------------------------------------------------------------------------------
 
-#hdul3 = fits.getdata("TOI_5463.01_90.000s_R-0018_out.fits")
 hdul3 = fits.getdata("2MASS_FITS.fits")
 
 print ("INFO: Fits file grabbed for modification")
-
-
-# data_frame = pd.DataFrame(hdul3)
-# print(data_frame.shape)
-
-# for i in range(len(y)):
-# 	for j in range(-30,30):
-# 		for k in range(-30,30):	
-# 			if ((times[i] % dur) /dur < frac):
-# 				hdul3[1024+xint[i]+j,yint[i]+k] += (1.0+sunfrac)*countrate*step*gaussian(np.sqrt((j+xfrac[i])*(j+xfrac[i])+(k+yfrac[i])*(k+yfrac[i])),0,sigma)
-# 			else: 
-# 				hdul3[1024+xint[i]+j,yint[i]+k] += (0.0+sunfrac)*countrate*step*gaussian(np.sqrt((j+xfrac[i])*(j+xfrac[i])+(k+yfrac[i])*(k+yfrac[i])),0,sigma)
-
-# hdu1=fits.PrimaryHDU(hdul3)
-
-# hdu1.writeto('test.fits',overwrite=True)
-
-# hdu11 = fits.open("test.fits")
-
-
 
 #--------------------------------------------------------------------------------------------------------------------
 # GRAB AND MODIFY FITS FILE NEW
 #--------------------------------------------------------------------------------------------------------------------
 
-fig = plt.figure(figsize=(10, 10), frameon=False)
-ax = plt.subplot(projection=wcs_helix)
-ax.arrow(RA[0], Dec[0], (RA[60000-1]-RA[0]), (Dec[60000-1]-Dec[0]), 
-         head_width=0, head_length=0, 
-         fc='orange', ec='orange', width=0.0003, 
-         transform=ax.get_transform('icrs'))
-ax.arrow(RA[30000-1], Dec[30000-1], 0, -0.1, 
-         head_width=0, head_length=0, 
-         fc='red', ec='red', width=0.003, 
-         transform=ax.get_transform('icrs'))
-plt.text(RA[30000-1], -4.075, '0.1 deg', 
-         color='white', rotation=90, 
-         transform=ax.get_transform('icrs'))
-plt.imshow(image1, origin='lower', cmap='cividis', aspect='equal')
+# fig = plt.figure(figsize=(10, 10), frameon=False)
+# ax = plt.subplot(projection=wcs_landolt)
 
-overlay = ax.get_coords_overlay('galactic')
-overlay.grid(color='white', ls='dotted')
-plt.xlabel(r'RA')
-plt.ylabel(r'Dec')
+#          head_width=0, head_length=0, 
+#          fc='red', ec='red', width=0.003, 
+#          transform=ax.get_transform('icrs'))
+# plt.text(RA[-1], -4.075, '0.1 deg', 
+#          color='white', rotation=90, 
+#          transform=ax.get_transform('icrs'))
 
-plt.savefig("Image_sim.png")
-plt.show()
+def Landoltplot(image,figsize=(15,13),cmap='inferno',scale=0.5,colorbar=False,header=None,wcsplot=None,**kwargs):
+    fig = plt.figure(figsize=figsize)
+    ax = plt.subplot(projection=wcsplot)
+    mu = np.mean(image)
+    s = np.std(image)
+    dvmin = mu - scale*s
+    dvmax = mu + scale*s
+    if all(['vmin','vmax']) in kwargs.keys():
+       im = ax.imshow(image,origin='lower',cmap=cmap,vmin=kwargs['vmin'],vmax=kwargs['vmax'])
+    elif 'vmin' in kwargs.keys():
+        im = ax.imshow(image,origin='lower',cmap=cmap,vmin=kwargs['vmin'],vmax=dvmax)
+    elif 'vmax' in kwargs.keys():
+        im = ax.imshow(image,origin='lower',cmap=cmap,vmin=dvmin,vmax=kwargs['vmax'])
+    else:
+        im = ax.imshow(image,origin='lower',cmap=cmap,vmin=dvmin,vmax=dvmax)
+    if colorbar:
+        cbar = plt.colorbar(im,ax=ax)
+
+
+    ax.arrow(RA[0], Dec[0]+0.005, (RA[-1]-RA[0]), (Dec[-1]-Dec[0]), 
+             head_width=0, head_length=0, 
+            fc='green', ec='green', width=0.0003, 
+            transform=ax.get_transform('icrs')) 
+    
+    ax.arrow(RA[0], Dec[0]-0.005, (RA[-1]-RA[0]), (Dec[-1]-Dec[0]), 
+             head_width=0, head_length=0, 
+            fc='green', ec='green', width=0.0003, 
+            transform=ax.get_transform('icrs')) 
+    
+
+    # ax.arrow(RA[0], Dec[0], (RA[-1]-RA[0]), (Dec[-1]-Dec[0]), 
+    #          head_width=0, head_length=0, 
+    #         fc='red', ec='red', width=0.0003, 
+    #         transform=ax.get_transform('icrs'))
+
+    for i in range(0,len(data)):
+        if R_Flux[i] == 0:
+            ax.scatter(RA[i],Dec[i], s=0.0001, marker=".", edgecolors=None, alpha= 0, transform=ax.get_transform('icrs'))
+        else:
+            ax.scatter(RA[i],Dec[i], s=0.0001, marker=".", edgecolors=None, transform=ax.get_transform('icrs'))
+
+    
+    overlay = ax.get_coords_overlay('icrs')
+    overlay.grid(color='white', ls='dotted')
+    plt.xlabel(r'RA')
+    plt.ylabel(r'Dec')
+    plt.savefig("Image_sim.png")
+    plt.show()
+    return fig, ax    
+
+
+
+Landoltplot(image1,scale=0.5, colorbar=True,wcsplot=wcs_landolt, vmin=-4.677, vmax=10)
+
+
 
 
 print ("INFO: Fits file modification complete")
@@ -314,4 +318,4 @@ print ("INFO: Fits file modification complete")
 # gc1.show_colorscale(cmap='inferno')
 # gc1.save('2MASS_FITS_MOD.png')
 
-# print ("INFO: PNGs Created! Closing code.")
+print ("INFO: PNGs Created! Closing code.")
