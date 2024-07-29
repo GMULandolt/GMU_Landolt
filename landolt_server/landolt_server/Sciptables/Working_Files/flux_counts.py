@@ -193,14 +193,18 @@ counts_final = counts_final[0:len(t)]
 # code for outputting the array of flux values
 heading = np.array('Radiant Flux (W)',dtype='str')
 heading2 = np.array('Counts')
+heading3 = np.array('Airmass')
 data = np.genfromtxt('satcoord.csv',dtype='str',delimiter=',') # inputs data file
 data = data[:,:6]
 I_final = np.asarray(I_final,dtype='str')
 counts_final = np.asarray(counts_final,dtype='str')
+airmass = np.asarray(airmass,dtype='str')
 I_final = np.insert(I_final[:],0,heading)
 counts_final = np.insert(counts_final[:],0,heading2)
+airmass = np.insert(airmass[:],0,heading3)
 output = np.column_stack((data,I_final))
 output = np.column_stack((output,counts_final))
+output = np.column_stack((output,airmass))
 np.savetxt('satcoord.csv', output, fmt='%s', delimiter=',')
 
 
