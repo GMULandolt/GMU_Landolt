@@ -27,7 +27,12 @@ class Settings:
              "tdelta": 10,
              "chunks": 100,
              "tle1": "NA",
-             "tle2": "NA"}
+             "tle2": "NA",
+             "d0": 100,
+             "t_eff": 1,
+             "t_diam": 0.8128,
+             "beta": 0,
+             "n": 0}
 
         for k, v in d.items():
             setattr(self, k, v) 
