@@ -84,6 +84,10 @@ df = pd.DataFrame({'Time (EST)': temptime,
                    'Distance (Km)': tempdf[:, 4, :].flatten()})
 df.to_csv('satcoord.csv', index=False)
 
+df = pd.DataFrame({'X': satcords[:, 0, :].flatten(), 
+                   'Y': satcords[:, 1, :].flatten(), 'Z': satcords[:, 2, :].flatten()})
+df.to_csv('satcoordXYZ.csv', index=False)
+
 end_time = time.time()
 print("Simulation run complete and data stored...")
 print('Execution time = %.6f seconds' % (end_time-start_time))
