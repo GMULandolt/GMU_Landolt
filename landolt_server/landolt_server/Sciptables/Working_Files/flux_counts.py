@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.special import wofz
 from scipy.integrate import quad
 from settings import parameters
+from skyfield. api import wgs84
 
 
 """
@@ -10,6 +11,8 @@ CODE FOR COMPUTING THE EXPECTED COUNTS AT A DETECTOR FROM THE LANDOLT SATELLITE 
 """
 
 data = np.genfromtxt('satcoord.csv',delimiter=',',skip_header=1) # inputs data file
+datalatlon = np.genfromtxt('satlatlon.csv',delimiter=',',skip_header=1)
+dataxyz = np.genfromtxt('satcoordxyz.csv',delimiter=',',skip_header=1)
 z = data[:,5]
 z = z*1e3 # changes units of distance to meters from kilometers
 tdelta = parameters.tdelta # increment of time in the file loaded in
@@ -19,7 +22,31 @@ FWHM = np.zeros(len(z))
 error_p = np.zeros(len(z))
 alt = data[:,4]*(np.pi/180) # altitude of satellite in sky at the center of the beam path
 alt_loc = data[0,4]*(np.pi/180) # altitude of satellite in sky at any given location
-d0 = float(parameters.d0) # distance of observer from center of beam path
+lat_obs = parameters.lat*(np.pi/180) # latitude of the center of the beam path
+lon_obs = parameters.lon*(np.pi/180) # longitude of the center of the beam path
+lat_loc = float(parameters.lat_loc)*(np.pi/180) # latitude of observer
+lon_loc = float(parameters.lon_loc)*(np.pi/180) # longitude of observer
+orient_x = 6371000*np.sin((np.pi/2) - lat_obs)*np.cos(lon_obs) # location of center of beam path in the x direction using the volumetric mean radius of earth
+orient_y = 6371000*np.sin((np.pi/2) - lat_obs)*np.sin(lon_obs) # similarly for the y direction
+orient_z = 6371000*np.cos((np.pi/2) - lat_obs) # similarly for the z direction
+orient_xloc = 6371000*np.sin((np.pi/2) - lat_loc)*np.cos(lon_loc) # location of the observer in the x direction using the volumetric mean radius of earth
+orient_yloc = 6371000*np.sin((np.pi/2) - lat_loc)*np.sin(lon_loc) # similarly for the y direction
+orient_zloc = 6371000*np.cos((np.pi/2) - lat_loc) # similarly for the z direction
+orient_xloc = orient_xloc - orient_x # to get vector from center of the beam path to observer
+orient_yloc = orient_yloc - orient_y # similarly
+orient_zloc = orient_zloc - orient_z # similarly
+sat_x = dataxyz[:,0] # x position of satellite in GCRS coordinates
+sat_y = dataxyz[:,1] # y position of satellite in GCRS coordinates
+sat_z = dataxyz[:,2] # z position of satellite in GCRS coordinates
+sat_lat = datalatlon[:,0] # latitude of satellite projected to earth
+sat_lon = datalatlon[:,1] # longitude of satellite projected to earth
+r_sat = np.sqrt(sat_x**2 + sat_y**2 + sat_z**2)*1e3 # distance from satellite to the center of the earth in meters
+orient_xsat = r_sat*np.sin((np.pi/2) - sat_lat)*np.cos(sat_lon) # location of the satellite in the x direction in lat/lon coordinates
+orient_ysat = r_sat*np.sin((np.pi/2) - sat_lat)*np.sin(sat_lon) # similarly for the y direction
+orient_zsat = r_sat*np.cos((np.pi/2) - sat_lat) # similarly for the z direction
+d0 = np.sqrt(orient_xloc**2 + orient_yloc**2 + orient_zloc**2) # distance of observer from center of beam path
+
+#d0 = float(parameters.d0) # distance of observer from center of beam path
 alpha = np.pi/2 - alt # angle a line perpendicular to the center of the beam path makes with a tangent line located at the center of the beam path
 fob = 1 # frequency of blinking (in seconds)
 t_efficiency = float(parameters.t_eff) # telescope efficiency
@@ -39,7 +66,7 @@ airmass = (1/np.cos(alpha)) - 0.0018167*((1/np.cos(alpha))-1) - 0.002875*((1/np.
 if d0 < diam_t/2:
     d0 = diam_t/2 # fixes error where starting at zero creates invalid variables, sets distance from center of the beam path to the radius of the telescope at the very minimum
     
-beta = float(parameters.beta) # angle between the distance from the center of the beam path to the observatory and a line perpendicular to the beam path
+beta = np.arccos(((orient_xloc*orient_xsat) + (orient_yloc*orient_ysat) + (orient_zloc*orient_zsat))/(d0*r_sat)) # angle between a line made between the center of the beam path and observer and the satellite-to-center of beam path vector projected on to earth's surface
 
 ### CALCULATIONS ###
 
@@ -58,9 +85,9 @@ print('Loop Start')
 for j in range(len(t)):
     z_new[j] = (z[j]+(0.00008*d0))/np.cos(theta[j]) # amount of distance a given light ray travels factoring in the curvature of the earth
     if alt_loc <= alt[j]: # identifies if observer is closer or further from the satellite using its relative altitude in the sky
-        z_new[j] = z_new[j] - d0*np.tan(alpha[j])*np.sin(beta)
+        z_new[j] = z_new[j] - d0*np.tan(alpha[j])*np.sin(beta[j])
     else:
-        z_new[j] = z_new[j] + d0*np.tan(alpha[j])*np.sin(beta)
+        z_new[j] = z_new[j] + d0*np.tan(alpha[j])*np.sin(beta[j])
     w_z[j] = w_0*np.sqrt(1+(z_new[j]/z_r)**2) # beam radius observed on earth's surface accounting for the curvature of earth
     flux_z[j] = I_0*((w_0/w_z[j])**2)*np.e**((-2*d0**2)/w_z[j]**2) # flux along one 2D slice of the 3D gaussian beam profile for different distances from the satellite in the center of the beam path
 print('Done!')

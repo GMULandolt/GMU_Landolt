@@ -47,6 +47,7 @@ difference = sat - obs
 chunk_size = parameters.tdelta * parameters.chunks
 num_chunks = int(tscale/chunk_size)
 satcords = np.zeros((num_chunks, 3, int(chunk_size / parameters.tdelta)), object)
+satlatlon = np.zeros((num_chunks, 2, int(chunk_size / parameters.tdelta)), object)
 obscords = np.zeros((num_chunks, 3, int(chunk_size / parameters.tdelta)), object)
 timelist = np.zeros((num_chunks, int(chunk_size / parameters.tdelta)), object)
 tempdf = np.zeros((num_chunks, 5, int(chunk_size / parameters.tdelta)), object)
@@ -67,6 +68,8 @@ for i in range(num_chunks):
    obscoord = obs.at(t)
    satcords[i] = satcord.position.km
    obscords[i] = obscoord.position.km
+   lat, lon = wgs84.latlon_of(satcord)
+   satlatlon[i] = [lat.degrees, lon.degrees]
    
    topocentric = difference.at(t)
    ra, dec, distance = topocentric.radec()
@@ -83,6 +86,9 @@ df = pd.DataFrame({'Time (EST)': temptime,
                    'Az (Deg)': tempdf[:, 2, :].flatten(), 'Alt (Deg)': tempdf[:, 3, :].flatten(),
                    'Distance (Km)': tempdf[:, 4, :].flatten()})
 df.to_csv('satcoord.csv', index=False)
+
+df = pd.DataFrame({'Lat': satlatlon[:, 0, :].flatten(), 'Lon': satlatlon[:, 1, :].flatten()})
+df.to_csv('satlatlon.csv', index=False)
 
 end_time = time.time()
 print("Simulation run complete and data stored...")
