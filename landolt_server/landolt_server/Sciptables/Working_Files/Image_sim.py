@@ -88,6 +88,7 @@ Alt     = data[:,4]
 Dist    = data[:,5]
 R_Flux  = data[:,6]
 Count   = data[:,7]
+AirMass = data[:,8]
 
 print(RA)
 print(Dec)
@@ -232,6 +233,14 @@ print ("INFO: Fits file grabbed for modification")
 # GRAB AND MODIFY FITS FILE NEW
 #--------------------------------------------------------------------------------------------------------------------
 
+fitsfile = fits.open("2MASS_FITS.fits")
+
+
+
+
+
+
+
 # fig = plt.figure(figsize=(10, 10), frameon=False)
 # ax = plt.subplot(projection=wcs_landolt)
 
@@ -242,7 +251,7 @@ print ("INFO: Fits file grabbed for modification")
 #          color='white', rotation=90, 
 #          transform=ax.get_transform('icrs'))
 
-def Landoltplot(image,figsize=(15,13),cmap='inferno',scale=0.5,colorbar=False,header=None,wcsplot=None,**kwargs):
+def Landoltplot(image,figsize=(15,15),cmap='inferno',scale=0.5,colorbar=False,header=None,wcsplot=None,**kwargs):
     fig = plt.figure(figsize=figsize)
     ax = plt.subplot(projection=wcsplot)
     mu = np.mean(image)
@@ -261,15 +270,15 @@ def Landoltplot(image,figsize=(15,13),cmap='inferno',scale=0.5,colorbar=False,he
         cbar = plt.colorbar(im,ax=ax)
 
 
-    ax.arrow(RA[0], Dec[0]+0.005, (RA[-1]-RA[0]), (Dec[-1]-Dec[0]), 
-             head_width=0, head_length=0, 
-            fc='green', ec='green', width=0.0003, 
-            transform=ax.get_transform('icrs')) 
+    # ax.arrow(RA[0], Dec[0], 1,1,
+    #          head_width=0, head_length=0, 
+    #         fc='green', ec='green', width=0.0003, 
+    #         transform=ax.get_transform('icrs')) 
     
-    ax.arrow(RA[0], Dec[0]-0.005, (RA[-1]-RA[0]), (Dec[-1]-Dec[0]), 
-             head_width=0, head_length=0, 
-            fc='green', ec='green', width=0.0003, 
-            transform=ax.get_transform('icrs')) 
+    # ax.arrow(RA[0], Dec[0], abs(RA[-1]-RA[0]), abs(Dec[-1]-Dec[0]), 
+    #          head_width=0, head_length=0, 
+    #         fc='green', ec='green', width=0.0003, 
+    #         transform=ax.get_transform('icrs')) 
     
 
     # ax.arrow(RA[0], Dec[0], (RA[-1]-RA[0]), (Dec[-1]-Dec[0]), 
@@ -282,6 +291,7 @@ def Landoltplot(image,figsize=(15,13),cmap='inferno',scale=0.5,colorbar=False,he
             ax.scatter(RA[i],Dec[i], s=0.0001, marker=".", edgecolors=None, alpha= 0, transform=ax.get_transform('icrs'))
         else:
             ax.scatter(RA[i],Dec[i], s=0.0001, marker=".", edgecolors=None, transform=ax.get_transform('icrs'))
+
 
     
     overlay = ax.get_coords_overlay('icrs')
