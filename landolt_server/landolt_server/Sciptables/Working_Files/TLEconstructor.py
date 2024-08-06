@@ -89,6 +89,8 @@ df.to_csv('satcoord.csv', index=False)
 
 df = pd.DataFrame({'Lat': satlatlon[:, 0, :].flatten(), 'Lon': satlatlon[:, 1, :].flatten()})
 df.to_csv('satlatlon.csv', index=False)
+df = pd.DataFrame({'X': satcords[:, 0, :].flatten(), 'Y': satcords[:, 1, :].flatten(), 'Z': satcords[:, 2, :].flatten()})
+df.to_csv('satcoordXYZ.csv', index=False)
 
 end_time = time.time()
 print("Simulation run complete and data stored...")
