@@ -1,31 +1,42 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.special import wofz
 from scipy.integrate import quad
 from settings import parameters
-from skyfield. api import wgs84
-
 
 """
 CODE FOR COMPUTING THE EXPECTED COUNTS AT A DETECTOR FROM THE LANDOLT SATELLITE WITH NO ATMOSPHERIC ABSORPTION
 """
 
-data = np.genfromtxt('satcoord.csv',delimiter=',',skip_header=1) # inputs data file
-datalatlon = np.genfromtxt('satlatlon.csv',delimiter=',',skip_header=1)
-dataxyz = np.genfromtxt('satcoordxyz.csv',delimiter=',',skip_header=1)
-z = data[:,5]
-z = z*1e3 # changes units of distance to meters from kilometers
+data = np.genfromtxt('satcoord.csv',delimiter=',',skip_header=1) # inputs data file from orbit simulations
+datalatlon = np.genfromtxt('satlatlon.csv',delimiter=',',skip_header=1) # inputs latitude and longitude information of the satellite
+dataxyz = np.genfromtxt('satcoordxyz.csv',delimiter=',',skip_header=1) # inputs position data of the satellite
+
+### VARIABLES ###
+
 tdelta = parameters.tdelta # increment of time in the file loaded in
-t = np.linspace(0,len(z)-1,num=len(z))*tdelta # creates array of times incrementing with t=tdelta
-w_z = np.zeros(len(z))
-FWHM = np.zeros(len(z))
-error_p = np.zeros(len(z))
-alt = data[:,4]*(np.pi/180) # altitude of satellite in sky at the center of the beam path
-alt_loc = data[0,4]*(np.pi/180) # altitude of satellite in sky at any given location
 lat_obs = parameters.lat*(np.pi/180) # latitude of the center of the beam path
 lon_obs = parameters.lon*(np.pi/180) # longitude of the center of the beam path
 lat_loc = float(parameters.lat_loc)*(np.pi/180) # latitude of observer
 lon_loc = float(parameters.lon_loc)*(np.pi/180) # longitude of observer
+t_efficiency = float(parameters.t_eff) # telescope efficiency
+ccd_efficiency = float(parameters.ccd_eff) # CCD efficiency
+diam_t = float(parameters.t_diam) # diameter of telescope
+lmbda_n = int(parameters.n) # determines which laser is being looked at (0 - 488nm, 1 - 785nm, 2 - 976nm, 3 - 1550nm)
+humidity = float(parameters.humidity)
+fob = 1 # frequency of blinking (in seconds)
+aod = 0.1 # aerosol optical depth
+# aod varies w/ humidity, the code factors that in here
+if humidity >= 0.6:
+    aod = aod + 0.05
+if humidity >= 0.8:
+    aod = aod + 0.05
+
+z = data[:,5]*1e3 # extracting distance of observer to satellite in units of meters
+alt = data[:,4]*(np.pi/180) # altitude of satellite in sky at the center of the beam path
+alt0 = data[0,4]*(np.pi/180) # altitude of satellite in sky at any given location
+alpha = np.pi/2 - alt # angle a line perpendicular to the center of the beam path makes with a tangent line located at the center of the beam path
+t = np.linspace(0,len(z)-1,num=len(z))*tdelta # creates array of times incrementing with t=tdelta
+airmass = (1/np.cos(alpha)) - 0.0018167*((1/np.cos(alpha))-1) - 0.002875*((1/np.cos(alpha))-1)**2 - 0.0008083*((1/np.cos(alpha))-1)**3 # airmass at a given altitude in the sky
+
 orient_x = 6371000*np.sin((np.pi/2) - lat_obs)*np.cos(lon_obs) # location of center of beam path in the x direction using the volumetric mean radius of earth
 orient_y = 6371000*np.sin((np.pi/2) - lat_obs)*np.sin(lon_obs) # similarly for the y direction
 orient_z = 6371000*np.cos((np.pi/2) - lat_obs) # similarly for the z direction
@@ -45,28 +56,26 @@ orient_xsat = r_sat*np.sin((np.pi/2) - sat_lat)*np.cos(sat_lon) # location of th
 orient_ysat = r_sat*np.sin((np.pi/2) - sat_lat)*np.sin(sat_lon) # similarly for the y direction
 orient_zsat = r_sat*np.cos((np.pi/2) - sat_lat) # similarly for the z direction
 d0 = np.sqrt(orient_xloc**2 + orient_yloc**2 + orient_zloc**2) # distance of observer from center of beam path
+beta = np.arccos(((orient_xloc*orient_xsat) + (orient_yloc*orient_ysat) + (orient_zloc*orient_zsat))/(d0*r_sat)) # angle between a line made between the center of the beam path and observer and the satellite-to-center of beam path vector projected on to earth's surface
+if d0 < diam_t/2:
+    d0 = diam_t/2 # fixes error where starting at zero creates invalid variables, sets distance from center of the beam path to the radius of the telescope at the very minimum
 
-#d0 = float(parameters.d0) # distance of observer from center of beam path
-alpha = np.pi/2 - alt # angle a line perpendicular to the center of the beam path makes with a tangent line located at the center of the beam path
-fob = 1 # frequency of blinking (in seconds)
-t_efficiency = float(parameters.t_eff) # telescope efficiency
-
-### VARIABLES ###
+w_z = np.zeros(len(z))
+FWHM = np.zeros(len(z))
+error_p = np.zeros(len(z))
+z_new = np.zeros(len(t))
+w_z = np.zeros(len(t))
+flux_z = np.zeros(len(t))
+tflux = np.zeros(len(t))
+counts = np.zeros(len(t))
+I_final = np.zeros(len(t))
+counts_final = np.zeros(len(t))
 
 MFD = 1e-5 # mode field diameter of optical fiber
 w_0 = MFD/2 # waist radius of the gaussian beam
-lmbda = [488e-9, 785e-9, 976e-9, 1550e-9] # wavelength of laser
-lmbda_n = int(parameters.n) # determines which laser is being looked at (0 - 488nm, 1 - 785nm, 2 - 976nm, 3 - 1550nm)
-P_0 = [0.25, 0.1, 0.5, 0.1] # power of laser
-diam_t = float(parameters.t_diam) # diameter of telescope
+lmbda = [488e-9, 785e-9, 976e-9, 1550e-9] # wavelength of all four lasers
+P_0 = [0.25, 0.1, 0.5, 0.1] # power of all four lasers
 a_t = np.pi*(diam_t/2)**2 # area that the telescope is able to take in light
-aod = 0.15 # aerosol optical depth
-airmass = (1/np.cos(alpha)) - 0.0018167*((1/np.cos(alpha))-1) - 0.002875*((1/np.cos(alpha))-1)**2 - 0.0008083*((1/np.cos(alpha))-1)**3 # airmass at a given altitude in the sky
-
-if d0 < diam_t/2:
-    d0 = diam_t/2 # fixes error where starting at zero creates invalid variables, sets distance from center of the beam path to the radius of the telescope at the very minimum
-    
-beta = np.arccos(((orient_xloc*orient_xsat) + (orient_yloc*orient_ysat) + (orient_zloc*orient_zsat))/(d0*r_sat)) # angle between a line made between the center of the beam path and observer and the satellite-to-center of beam path vector projected on to earth's surface
 
 ### CALCULATIONS ###
 
@@ -78,13 +87,10 @@ w_z0 = w_0*np.sqrt(1+(z[0]/z_r)**2) # beam radius at distance z
 FWHM = np.sqrt(2*np.log(2))*w_z0 # full width at half maximum of the beam profile for a given distance from the waist
 x = np.arange(d0 - diam_t/2, d0 + diam_t/2, 0.0001) # the distance on one direction perpendicular to the laser vector
 theta = np.arctan(d0/z) # angle made between the normal of earth's surface and a beam of light landing a given distance away from the normal
-z_new = np.zeros(len(t))
-w_z = np.zeros(len(t))
-flux_z = np.zeros(len(t))
-print('Loop Start')
+print('Calculating Gaussian distribution of flux...')
 for j in range(len(t)):
     z_new[j] = (z[j]+(0.00008*d0))/np.cos(theta[j]) # amount of distance a given light ray travels factoring in the curvature of the earth
-    if alt_loc <= alt[j]: # identifies if observer is closer or further from the satellite using its relative altitude in the sky
+    if alt0 <= alt[j]: # identifies if observer is closer or further from the satellite using its relative altitude in the sky
         z_new[j] = z_new[j] - d0*np.tan(alpha[j])*np.sin(beta[j])
     else:
         z_new[j] = z_new[j] + d0*np.tan(alpha[j])*np.sin(beta[j])
@@ -95,10 +101,7 @@ print('Done!')
 dis_t = x # distance of telescope from center of beam
 error_p[1:] = z_new[1:]*0.00000484813681109536*t[1:] # error in pointing in km
 
-tflux = np.zeros(len(t))
-counts = np.zeros(len(t))
-
-print('Loop Start') # finds the total flux over a given detector area
+print('Calculating flux recieved at telescope...') # finds the total flux over a given detector area
 for i in range(len(t)):
     def flux_fn(r):
         return r*I_0*((w_0/w_z[i])**2)*np.e**((-2*r**2)/w_z[i]**2)
@@ -106,46 +109,7 @@ for i in range(len(t)):
     coeftemp = np.pi*(((diam_t/2) + d0)**2 - (-(diam_t/2) + d0)**2) / a_t # calculates fraction of distribution needed to be swept over to get an area a_t
     tflux[i] = tflux_temp[0]*(np.pi/coeftemp) # integrating over an angle that gives us an arclength of the diameter of the telescope
     counts[i] = (tflux[i]*lmbda[lmbda_n])/(6.62607015e-34*299792458) # total counts taken in
-print('\nDone!')
-
-"""
-TELLURIC ABSORPTION
-"""
-
-# Functions for calculating the absorption coefficient
-
-def V(x,f,alpha,gamma):
-    """
-    Creates a Voigt line shape at x with Lorentzian FWHM alpha and Gaussian FWHM gamma at frequency f
-    """
-    sigma = alpha / np.sqrt(2 * np.log(2))
-    
-    return np.real(wofz((x + 1j*gamma)/sigma/np.sqrt(2))) / sigma / np.sqrt(2*np.pi)
-
-def S(lmbda, n_1, B_12, T):
-    """
-    Function for the line intensity at wavelength lmbda, number density of molecules 
-    in their ground energy state n_1, Einstein coefficient B_12, and temperature T
-    """
-    
-    h = 6.62607015e-34
-    k = 1.380649e-23
-    c = 299792458
-    
-    return ((lmbda**2)/8*np.pi)*n_1*B_12*(1-np.e**(-(h*c)/(lmbda*k*T)))
-
-def abs_coef(S_12, phi):
-    """
-    Calculates the absorption coefficient with line intensity S_12 and line shape phi
-    """
-    return S_12*phi
-
-def transmissivity(abs_coef, d):
-    """
-    Calculates the transmissivity of the atmosphere from the absorption coefficient and
-    distance d from the satellite to the detector
-    """
-    return np.e**(-abs_coef*d)
+print('Done!')
 
 # Functions for calculating the scattering coefficient
 
@@ -196,8 +160,6 @@ else:
     cs_co2 = 2.26e-32
     cs_ne = 3.24e-34
 
-I_final = np.zeros(len(t))
-counts_final = np.zeros(len(t))
 r_coef1 = 1 - r_coef(cs_n2, z_new, N*0.78084) # scattering coefficient from rayleigh scattering for n2
 r_coef2 = 1 - r_coef(cs_o2, z_new, N*0.20946) # scattering coefficient from rayleigh scattering for o2
 r_coef3 = 1 - r_coef(cs_ar, z_new, N*0.00934) # scattering coefficient from rayleigh scattering for argon
@@ -207,7 +169,7 @@ m_coef = 1 - np.ones(len(t))*np.e**(-aod*(1/np.cos(theta))) # transmission coeff
 
 for i in range(len(t)):
     I_final[i] = (tflux[i] - tflux[i]*(m_coef[i]+r_coef1[i]+r_coef2[i]+r_coef3[i]+r_coef4[i]+r_coef5[i])*airmass[i])*t_efficiency # calculates flux observed at telescope
-    counts_final[i] = ((I_final[i]*lmbda[lmbda_n])/(6.62607015e-34*299792458))*t_efficiency # total counts taken in
+    counts_final[i] = ((I_final[i]*lmbda[lmbda_n])/(6.62607015e-34*299792458))*ccd_efficiency # total counts taken in
 
 for i in range(int(fob/1e-3)):
     I_final[i::2*int(fob/1e-3)] = 0

@@ -29,11 +29,13 @@ class Settings:
              "tle1": "NA",
              "tle2": "NA",
              "t_eff": 1,
+             "ccd_eff": 1,
              "t_diam": 0.8128,
              "beta": 0,
              "n": 0,
              "lat_loc": "38.8308",
-             "lon_loc": "-77.3075"}
+             "lon_loc": "-77.3075",
+             "humidity": "0.5"}
 
         for k, v in d.items():
             setattr(self, k, v) 
