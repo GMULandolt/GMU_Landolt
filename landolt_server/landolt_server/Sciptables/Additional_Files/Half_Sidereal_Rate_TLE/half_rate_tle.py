@@ -13,14 +13,14 @@ Can be run as a standalone script or imported as a function:
 
 # Use the most recent TLE for best results: https://celestrak.org/NORAD/elements
 TLE = """
-INTELSAT 40E (IS-40E)
-1 56174U 23052A   24184.95208998 -.00000173  00000+0  00000+0 0  9994
-2 56174   0.0239  45.7585 0001817  93.6411  33.8124  1.00269386  4677
+INTELSAT 40E (IS-40E)   
+1 56174U 23052A   24196.41507959 -.00000157  00000+0  00000+0 0  9999
+2 56174   0.0145  52.0053 0002276  85.6946 213.4898  1.00269762  4771
 """
 
-from datetime import datetime, timezone, timedelta
-import math
 import random
+from datetime import datetime, timezone, timedelta
+from math import pi as PI
 from scipy.optimize import curve_fit
 from sgp4.api import Satrec, WGS72
 from sgp4.conveniences import jday_datetime
@@ -31,7 +31,7 @@ from skyfield.positionlib import Geocentric
 
 OBSERVER = wgs84.latlon(38.8282, -77.3053, 140)  # George Mason University Observatory
 
-RATE_FACTOR = 0.5  # half the rate
+RATE_FACTOR = 0.5  # Factor to multiply satellite's angular velocity by. 0.5 = half rate. Can also set to 1/3, 1/4, etc.
 DISTANCE_FACTOR = (1 / RATE_FACTOR) ** (2 / 3)  # halving angular velocity -> multiply radius by cube root of 4
 SATNUM = random.randint(70000, 99999)
 JD, FR = jday_datetime(datetime.now())
@@ -42,14 +42,16 @@ T = TS.from_datetime(NOW)
 
 EARTH_RADIUS_AU = 4.2632e-5
 EARTH = 399  # NAIF code
-TWO_PI = 2 * math.pi
+TWO_PI = 2 * PI
 
 TIME_DISPLACEMENT = 5 * 60  # seconds
-TIME_INTERVAL = 20  # seconds    
+TIME_INTERVAL = 20  # seconds
+
 
 #### Helper functions ####
 def to_tle(sat, title):
-    return (title + f" HALF {sat.epochdays:.4f}\n" if title else "") + "\n".join(export_tle(sat))
+    return (title + " HALF\n" if title else "") + "\n".join(export_tle(sat))
+    # return (title + f" HALF {sat.epochdays:.4f}\n" if title else "") + "\n".join(export_tle(sat))
 
 
 def get_topocentric(sat):
@@ -107,33 +109,28 @@ def ra_dec_t(sat, ra_weight, dec_weight, distance_weight,
 
 
 def apply_limits(mo, ecco, inclo, no):
-    return (
-        mo % TWO_PI,
-        ecco,
-        abs(inclo),
-        no
-    )
+    return mo % TWO_PI, ecco, abs(inclo), no
+
 
 def ra_dec_t_sat(xdata, mo, ecco, inclo, no):
     ra_weight, dec_weight, distance_weight, bstar, ndot, nddot, argpo, nodeo = xdata
     sat = sat_init(bstar, ndot, nddot, argpo, nodeo, mo, ecco, inclo, no)
-    return ra_dec_t(sat, ra_weight, dec_weight, distance_weight, 
-                    time_displacement=TIME_DISPLACEMENT * RATE_FACTOR, time_interval=TIME_INTERVAL * RATE_FACTOR)
+    return ra_dec_t(sat, ra_weight, dec_weight, distance_weight, time_displacement=TIME_DISPLACEMENT * RATE_FACTOR, time_interval=TIME_INTERVAL * RATE_FACTOR)
 
 
 def generate_half_rate_tle(tle: str, now: datetime = None) -> tuple[str, tuple[float, float, float]]:
     """
-    Generates a TLE for a satellite moving at half the angular velocity of the input satellite. 
-    The orbit contains RA/Dec coordinates approximately equal to those of the original satellite's 
+    Generates a TLE for a satellite moving at half the angular velocity of the input satellite.
+    The orbit contains RA/Dec coordinates approximately equal to those of the original satellite's
     orbit (but at half the rate). Valid only for time intervals close to the specified date/time.
 
     Args:
         tle (str): The input satellite TLE.
         now (datetime.datetime, optional): The date/time to generate the TLE at. Defaults to the current date/time.
             The generated satellite will be positioned to match the input satellite's location at this time.
-    
+
     Returns:
-        tle (str): The generated half-rate satellite TLE 
+        tle (str): The generated half-rate satellite TLE
         error (tuple[float, float, float]): The error in RA/Dec/Distance between the original and generated satellite.
     """
     if now:
@@ -156,7 +153,7 @@ def generate_half_rate_tle(tle: str, now: datetime = None) -> tuple[str, tuple[f
     # Use SGP4 to calculate the real satellite's current location
     ra, dec, distance = calc_radec(sat)
     print()
-    print("Real Satellite RA/Dec/Distance:     ", ra, '|', dec, '|', distance)
+    print("Real Satellite RA/Dec/Distance:     ", ra, "|", dec, "|", distance)
 
     # Convert to skyfield
     skyfield_sat = EarthSatellite.from_satrec(sat, TS)
@@ -184,9 +181,9 @@ def generate_half_rate_tle(tle: str, now: datetime = None) -> tuple[str, tuple[f
     no = sat.no_kozai * RATE_FACTOR  # mean motion (angular velocity) halved
 
     # Keep values in range
-    if lat.radians < 0:
-        nodeo = (sat.nodeo + math.pi) % TWO_PI
-        argpo = (sat.argpo + math.pi) % TWO_PI
+    # if lat.radians < 0:
+    #     nodeo = (nodeo + PI) % TWO_PI
+    #     argpo = (argpo + PI) % TWO_PI
 
     # Weights for ra/dec/distance so they are weighted appropriately during optimization
     ra_weight = 1 / ra.radians
@@ -208,8 +205,8 @@ def generate_half_rate_tle(tle: str, now: datetime = None) -> tuple[str, tuple[f
     #     (mo + 0.5, 1, inclo + 0.5, no + 0.0001),
     # )
     bounds = (
-        (0,      0, 0,       no - 0.00005),
-        (TWO_PI, 1, math.pi, no + 0.00005)
+        (0,      0, 0,  no - 0.00005),
+        (TWO_PI, 1, PI, no + 0.00005)
     )
 
     try:
