@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+    Scripts
+{% endblock %}
+
+{% block content %}
+<h2>Run Landolt Mission Arlo Scripts</h2>
+<br>
+<div class="row">
+    {% for script in scripts %}
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ script.name }}</h5>
+                    <p class="card-text">{{ script.description }}</p>
+                    <a href="{% url 'run_script' script.id %}" class="btn btn-primary">Run</a>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+
+</div>
+
+
+{% endblock %}

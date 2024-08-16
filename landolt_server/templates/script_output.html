@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+    Script Output
+{% endblock %}
+
+{% block content %}
+<h2>Script output: {{ script.name }}</h2>
+<br>
+<a href="{% url 'download_output_file' script.id %}" class="btn btn-primary">
+    Download Output File
+</a>
+<br><br>
+<code>
+    {{ output|linebreaks }}
+</code>
+<br>
+
+{% endblock %}
