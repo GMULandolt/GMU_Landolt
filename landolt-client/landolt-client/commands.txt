@@ -1,8 +1,0 @@
-Deploy the client 
-    ng build 
-    copy folder dist to web folder in landolt_serve
-
-Deploy locally 
-    ng serve 
-Build a component 
-    ng generate component name
