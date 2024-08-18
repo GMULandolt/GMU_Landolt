@@ -1,4 +1,4 @@
-#Lillehei
+#Elizabeth Lillehei
 
 #--------------------------------------------------------------------------------------------------------------------
 # IMPORTS
@@ -25,7 +25,6 @@ from astropy.coordinates import SkyCoord, Longitude, Latitude, Angle
 from astropy import wcs as astropy_wcs
 from astroquery.hips2fits import conf
 
-# from flux_counts import *
 
 
 
@@ -38,44 +37,18 @@ Database = 'CDS/P/2MASS/K'        #Hips2fits database
 
 height    = 1024                   #Pixel image sizes
 width     = 1024
+pixel     = 0.0002777777778     # [deg] Coordinate increment at reference point. 0.0002777777778 corresponds to 1px/arcsecond
 
-resolution1 = 10 # times arcmin   #zoom amount
 
 #--------------------------------------------------------------------------------------------------------------------
 # FUNCTIONS
 #--------------------------------------------------------------------------------------------------------------------
 
-def gaussian(x, mu, sig):
-    return 1./(np.sqrt(2.*np.pi)*sig)*np.exp(-np.power((x - mu)/sig, 2.)/2)
-
-
-#--------------------------------------------------------------------------------------------------------------------
-# SPACECRAFT DATA OLD
-#--------------------------------------------------------------------------------------------------------------------
-
 # 15 "/sec / 0.34 "/px = 44 px/s
 # 3 "/sec / 0.34 "/px = 9 px/s
-# xrate     = 9           # px/s
-# yrate     = 44          # px/s
-# countrate = 3554
-# step      = 0.1          # time step
-# seeing    = 9            # px FWHM
-# sunfrac   = 0.0          # intensity of reflected sunlight to laser light from spacecraft
-# frac      = 0.25         # fraction of laser cycle on
-# dur       = 2.0          # laser cycle duration in seconds
-# sigma     = seeing /2.355
-# times     = np.arange(1,91,step)
-
-
-# y     = yrate * times
-# x     = xrate * times
-# yint  = np.round(y).astype(int)
-# xint  = np.round(x).astype(int)
-# yfrac = y - yint
-# xfrac = x - xint
 
 #--------------------------------------------------------------------------------------------------------------------
-# SPACECRAFT DATA NEW
+# SPACECRAFT DATA 
 #--------------------------------------------------------------------------------------------------------------------
 
 data = np.genfromtxt('satcoord.csv',delimiter=',',skip_header=1) # inputs data file
@@ -87,8 +60,8 @@ Az      = data[:,3]
 Alt     = data[:,4]
 Dist    = data[:,5]
 R_Flux  = data[:,6]
-Count   = data[:,7]
-AirMass = data[:,8]
+# Count   = data[:,7]
+# AirMass = data[:,8]
 
 print(RA)
 print(Dec)
@@ -152,13 +125,13 @@ w = astropy_wcs.WCS(header={
     'WCSAXES': 2,           # Number of coordinate axes
     'CTYPE1': 'RA---TAN', 
     'CUNIT1': 'deg', 
-    'CDELT1': -0.0002777777778,        # [deg] Coordinate increment at reference point
+    'CDELT1': pixel,        
     'CRPIX1': 512, 
     'CRVAL1': RA_import,
     'NAXIS1': height,
     'CTYPE2': 'DEC--TAN', 
     'CUNIT2': 'deg', 
-    'CDELT2': 0.0002777777778, 
+    'CDELT2': pixel,      
     'CRPIX2': 512, 
     'CRVAL2': Dec_import, 
     'NAXIS2': width
@@ -168,13 +141,13 @@ w = astropy_wcs.WCS(header={
 wcs_input_dict = {
     'CTYPE1': 'RA---TAN', 
     'CUNIT1': 'deg', 
-    'CDELT1': -0.0002777777778, 
+    'CDELT1': pixel, 
     'CRPIX1': 1, 
     'CRVAL1': RA_import, 
     'NAXIS1': height,
     'CTYPE2': 'DEC--TAN', 
     'CUNIT2': 'deg', 
-    'CDELT2': 0.0002777777778, 
+    'CDELT2': pixel, 
     'CRPIX2': 1, 
     'CRVAL2': Dec_import, 
     'NAXIS2': width
@@ -200,7 +173,7 @@ print ("INFO: Fits file imported")
 result.writeto("2MASS_FITS.fits",overwrite=True)
 
 #--------------------------------------------------------------------------------------------------------------------
-
+# MODIFY WCS HEADER TO PREPARE FOR EDITING
 #--------------------------------------------------------------------------------------------------------------------
 
 
@@ -214,24 +187,17 @@ image1 = header_data_unit_list[0].data
 
 header1 =header_data_unit_list[0].header
 
-print(header1)
-
 wcs_landolt = astropy_wcs.WCS(header1)
 
-print(wcs_landolt)
+
+
+
 
 
 #--------------------------------------------------------------------------------------------------------------------
-# GRAB AND MODIFY FITS FILE OLD
+# GRAB AND MODIFY FITS FILE
 #--------------------------------------------------------------------------------------------------------------------
-
-hdul3 = fits.getdata("2MASS_FITS.fits")
-
 print ("INFO: Fits file grabbed for modification")
-
-#--------------------------------------------------------------------------------------------------------------------
-# GRAB AND MODIFY FITS FILE NEW
-#--------------------------------------------------------------------------------------------------------------------
 
 fitsfile = fits.open("2MASS_FITS.fits")
 
@@ -270,15 +236,15 @@ def Landoltplot(image,figsize=(15,15),cmap='inferno',scale=0.5,colorbar=False,he
         cbar = plt.colorbar(im,ax=ax)
 
 
-    # ax.arrow(RA[0], Dec[0], 1,1,
-    #          head_width=0, head_length=0, 
-    #         fc='green', ec='green', width=0.0003, 
-    #         transform=ax.get_transform('icrs')) 
+    ax.arrow(RA[0], Dec[0]+((1/15)*Dec[0]), (RA[-1]-RA[0]), (Dec[-1]-Dec[0]),
+             head_width=0, head_length=0, 
+            fc='green', ec='green', width=0.0003, 
+            transform=ax.get_transform('icrs')) 
     
-    # ax.arrow(RA[0], Dec[0], abs(RA[-1]-RA[0]), abs(Dec[-1]-Dec[0]), 
-    #          head_width=0, head_length=0, 
-    #         fc='green', ec='green', width=0.0003, 
-    #         transform=ax.get_transform('icrs')) 
+    ax.arrow(RA[0], Dec[0]-((1/15)*Dec[0]), (RA[-1]-RA[0]), (Dec[-1]-Dec[0]), 
+             head_width=0, head_length=0, 
+            fc='green', ec='green', width=0.0003, 
+            transform=ax.get_transform('icrs')) 
     
 
     # ax.arrow(RA[0], Dec[0], (RA[-1]-RA[0]), (Dec[-1]-Dec[0]), 
@@ -306,26 +272,5 @@ def Landoltplot(image,figsize=(15,15),cmap='inferno',scale=0.5,colorbar=False,he
 
 Landoltplot(image1,scale=0.5, colorbar=True,wcsplot=wcs_landolt, vmin=-4.677, vmax=10)
 
-
-
-
-print ("INFO: Fits file modification complete")
-#--------------------------------------------------------------------------------------------------------------------
-# PLOTTING FITS FILES
-#--------------------------------------------------------------------------------------------------------------------
-
-
-
-# gc = aplpy.FITSFigure(result)
-# gc.show_colorscale(cmap='inferno')
-# gc.show_contour(data=result,filled=False,cmap='inferno')
-
-       
-# gc.save('2MASS_UNEDITED.png')
-
-
-# gc1 = aplpy.FITSFigure(hdu11)
-# gc1.show_colorscale(cmap='inferno')
-# gc1.save('2MASS_FITS_MOD.png')
 
 print ("INFO: PNGs Created! Closing code.")
