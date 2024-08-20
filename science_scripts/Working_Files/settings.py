@@ -43,7 +43,8 @@ class Settings:
         with open('settings.json') as f:
             variables = json.load(f)
         for key, value in variables.items():
-            setattr(self, key, value)
+            if value is not None and value != "":
+                setattr(self, key, value)
         
         stimes = re.split("[-\s:]", self.start)
         itimes = [int(i) for i in stimes]

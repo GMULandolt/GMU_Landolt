@@ -15,13 +15,13 @@ def home(request):
     if form.is_valid():
         data = form.cleaned_data
         save_file = open(os.path.join(settings.SCRIPTS_DIR, "Working_Files/settings.json"), "w")
-        jsondict = JsonResponse(data).content.decode("utf-8")
+        jsondict = json.loads(JsonResponse(data).content.decode("utf-8"))
         json.dump(jsondict, save_file, indent = 6)  
         save_file.close()
     else:
         data = form.errors.as_json()
         save_file = open(os.path.join(settings.SCRIPTS_DIR, "Working_Files/settings.json"), "w")
-        jsondict = JsonResponse(data, status=400).content.content.decode("utf-8")
+        jsondict = json.loads(JsonResponse(data, status=400).content.content.decode("utf-8"))
         json.dump(jsondict, save_file, indent = 6)  
         save_file.close()
     return render(request, 'home.html', {'form': form})
