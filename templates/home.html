@@ -8,4 +8,9 @@
 {% block content %}
 <h1>The Landolt Mission</h1>
 <p>Hello</p>
+<form method="POST" action="#" enctype="multipart/form-data">
+{%csrf_token%}
+    {{form}}
+<button>Save</button>
+</from>
 {% endblock %}

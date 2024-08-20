@@ -2,13 +2,29 @@ from django.shortcuts import render, get_object_or_404
 from django.conf import settings
 from django.http import HttpResponse
 from .models import Script
+from .forms import TableSettings
+from django.http import JsonResponse
+import json
 
 import magic
 import os
 
 
 def home(request):
-    return render(request, 'home.html')
+    form = TableSettings(request.POST)
+    if form.is_valid():
+        data = form.cleaned_data
+        save_file = open(os.path.join(settings.SCRIPTS_DIR, "Working_Files/settings.json"), "w")
+        jsondict = JsonResponse(data).content.decode("utf-8")
+        json.dump(jsondict, save_file, indent = 6)  
+        save_file.close()
+    else:
+        data = form.errors.as_json()
+        save_file = open(os.path.join(settings.SCRIPTS_DIR, "Working_Files/settings.json"), "w")
+        jsondict = JsonResponse(data, status=400).content.content.decode("utf-8")
+        json.dump(jsondict, save_file, indent = 6)  
+        save_file.close()
+    return render(request, 'home.html', {'form': form})
 
 
 def scripts(request):
