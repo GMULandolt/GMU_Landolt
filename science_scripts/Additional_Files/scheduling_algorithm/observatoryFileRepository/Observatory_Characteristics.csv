@@ -1,0 +1,81 @@
+name,latitude,longitude,timezone,diameter,elevation,light_pollution
+"George Mason Univ. Observatory, Virginia",38.8282,-77.3053,EST5EDT,0.8128,135,13
+"Bowling Green State Univ. Observatory, Ohio",41.378333,-83.659167,EST5EDT,0.5,215,11
+"Collins Observatory, Colby College, Maine",44.56667,-69.656378,EST5EDT,0.7,65,9
+"Smith College Observatory, Northampton, MA",42.317036,-72.639514,EST5EDT,0.4064,63,10
+"Moore Observatory, Univ. of Louisville, Kentucky",38.344792,-85.528475,EST5EDT,0.6,220,12
+"Harvard Clay Telescope, Cambridge, MA",42.3766,-71.1169,EST5EDT,0.4064,17,14
+"Leander McCormick Observatory, Univ. of Virginia",38.033333,-78.523333,EST5EDT,0.6604,252,10
+"Michael L. Britton Observatory, Dickinson College, PA",40.20398,-77.19786,EST5EDT,0.6096,148,11
+"Fan Mountain Observatory, VA",37.878333,-78.693333,EST5EDT,0.6604,553,11
+"Whitin Observatory, Wellesley College, MA",42.295,-71.305833,EST5EDT,0.6096,43,7
+"Olin Observatory, Connecticut College, CT",41.378889,-72.105278,EST5EDT,0.508,65,11
+"Sperry Observatory, Union County College, NJ",40.66632,-74.32327,EST5EDT,0.6096,23,11
+"Peter van de Kamp Observatory, Swarthmore College, PA",39.9071,-75.35555,EST5EDT,0.6096,71,12
+"Union College Observatory, NY",42.8176,-73.9283,EST5EDT,0.508,92,11
+"Van Vleck Observatory, Wesleyan University, CT",41.555,-72.659167,EST5EDT,0.6096,62,11
+"Vassar College Observatory, Poughkeepsie, NY",41.683011,-73.890604,EST5EDT,0.8128,60,11
+"Williams College Observatory, MA",42.7115,-73.2052,EST5EDT,0.6096,222,8
+"Mittelman Observatory, Middlebury College, VT",44.0134,-73.1813,EST5EDT,0.6096,122,8
+"George R. Wallace, Jr. Astrophysical Observatory, MA",42.295,-71.485,EST5EDT,0.6096,91,12
+"Foggy Bottom Observatory, Colgate Univ., NY",42.81651,-75.532568,EST5EDT,0.4064,410,8
+"Breyo Observatory, Siena College, NY",42.719546,-73.751433,EST5EDT,0.7,97,14
+"C.E.K. Mees Observatory, Univ. Rochester, NY",42.7002778,-77.4087667,EST5EDT,0.6096,690,7
+"Observatoire du Mont-Mégantic, Québec",45.455683,-71.1521,America/Toronto,1.6,1089,5
+Kitt Peak National Observatory,31.963333,-111.6,America/Phoenix,4,2120,3
+Mount Lemmon,32.416667,-110.731667,America/Phoenix,1.52,2510,7
+MMT Observatory,31.688333,-110.885,America/Phoenix,6.5,2608,3
+Lowell Observatory,35.096667,-111.535,America/Phoenix,4.3,2198,5
+Whipple Observatory,31.680944,-110.8775,America/Phoenix,4.7,2320,5
+Mount Graham Observatory,32.701667,-109.891667,America/Phoenix,11.9,2902,3
+Winer Observatory,31.665583,-110.60178,America/Phoenix,0.7,1503,5
+Apache Point Observatory,32.78,-105.82,MST7MDT,3.48,2798,2
+"Mauna Kea (Keck, Gemini, CFHT, Subaru, IRTF, etc.)",19.828333,-155.478333,Pacific/Honolulu,10,4213,1
+Dominion Astrophysical Observatory,48.521667,-123.416667,America/Vancouver,1.85,229,9
+Lick Observatory,37.343333,-121.636667,PST8PDT,3.05,1290,8
+McDonald Observatory,30.671667,-104.021667,CST6CDT,10,2075,2
+"Observatorio Astronomico Nacional, San Pedro Martir",31.029167,-115.486944,America/Tijuana,2.1,2830,1
+"Observatorio Astronomico Nacional, Tonantzintla",19.032778,-98.313889,America/Mexico_City,0.7,2174,12
+Palomar Observatory,33.356,-116.863,PST8PDT,5.08,1706,7
+"Red Buttes Observatory, Wyoming",41.17642,-105.57403,MST7MDT,0.6,2249,7
+Wyoming Infrared Observatory (WIRO),41.09706,-105.97653,MST7MDT,0.6,2919,5
+Boyce-Astro Research Observatory (San Diego),32.6133,-116.3319,America/Los_Angeles,0.4318,1133,7
+Rothney Astrophysical Observatory (Calgary),50.868039,-114.291142,America/Edmonton,1.83,1271,10
+"New Mexico Skies, Mayhill, NM",32.90388889,-105.52888889,MST7MDT,0.51,2214,7
+"Sierra Remote Observatories, CA",37.07055,-119.4128,America/Los_Angeles,0.4064,1404,5
+"Table Mountain Observatory, CA",34.38139,-117.68194,America/Los_Angeles,1.016,2292,6
+"Griffith Observatory, CA",34.11833,-118.20033,America/Los_Angeles,0.3048,346,14
+"Las Cumbres Observatory, CA",34.4327,-119.863,America/Los_Angeles,2,2163,10
+"Sommers-Bausch Observatory, Univ. of Colorado",40.00371,-105.263,America/Denver,0.508,1647,8
+Maury Lewin Astronomical Observatory,34.142075,-117.872065,America/Los_Angeles,0.356,233,13
+Cerro Tololo Interamerican Observatory,-30.165278,-70.815,America/Santiago,1.5,2215,3
+Gemini South Observatory,-30.24075,-70.736693,America/Santiago,8.1,2750,2
+European Southern Observatory: La Silla,-29.256667,-70.73,America/Santiago,3.57,2332,1
+European Southern Observatory: Paranal,-24.625,-70.403333,America/Santiago,8.2,2635,0
+ALMA,-23.029,-67.755,America/Santiago,6.5,5035,2
+Las Campanas Observatory,-29.003333,-70.701667,America/Santiago,6.5,2282,1
+Vera C. Rubin Observatory,-30.244639,-70.749417,America/Santiago,8.4,2663,2
+"Observatorio Astronomico de La Plata, Buenos Aires",-34.906751,-57.932299,America/Argentina/Buenos_Aires,2.15,26,14
+"Estacion Astrofisica Bosque Alegre, Cordoba, Argentina",-31.598333,-64.545833,America/Argentina/Cordoba,1.54,1156,5
+National Observatory of Venezuela,8.79,-70.866667,America/Caracas,1,3610,5
+"Laboratorio Nacional de Astrofisica, Brazil",-22.534444,-45.5825,America/Sao_Paulo,1.6,1847,7
+"Complejo Astronomico El Leoncito, San Juan, Argentina",-31.799167,-69.295,America/Argentina/San_Juan,2.2,2482,2
+Mt. Stromlo Observatory,-35.32065,149.0081,Australia/Sydney,0.2286,767,9
+Mt. Kent Observatory,-27.797861,151.855417,Australia/Brisbane,0.7,671,2
+Anglo-Australian Observatory / Siding Spring,-31.274,149.069,Australia/Sydney,3.89,1136,0
+"Mount John University Observatory, New Zealand",-43.986667,170.465,Pacific/Auckland,1.8,1028,2
+"Roque de los Muchachos, La Palma",28.758333,-17.88,Atlantic/Canary,10.4,2270,3
+"Observatorio de Sierra Nevada, Spain",37.064167,-3.384722,Europe/Madrid,1.5,2843,7
+"SLN - Catania Astrophysical Observatory, Italy",37.691667,-345.026667,Europe/Rome,4.3,1733,9
+"Mt. Ekar Observatory, Asiago, Italy",45.848589,-348.418867,Europe/Rome,1.22,1413,9
+"Ege University Observatory, Izmir, Turkey",38.398333,27.275,Europe/Istanbul,0.48,770,10
+"Tubitak National Observatory, Turkey",36.825,30.333333,Europe/Istanbul,1.5,2457,7
+National Astronomical Observatory Rozhen - Bulgaria,41.693056,-335.256111,Europe/Sofia,2,1732,5
+"Calar Alto Observatory, Spain",37.223611,-2.54625,Europe/Madrid,3.5,2158,5
+Observatorium Hoher List (Universität Bonn) - Germany,50.16276,6.85,Europe/Berlin,0.5,503,6
+"Boyden Observatory, Bloemfontein, South Africa",-29.038889,-332.594444,Africa/Johannesburg,1.5,1372,0
+South African Astronomical Observatory,-32.379444,-339.189306,Africa/Johannesburg,9.2,1798,0
+"Beijing XingLong Observatory, China",40.393333,-242.425,Asia/Shanghai,2.16,950,7
+"Vainu Bappu Observatory, India",12.57666,-281.1734,Asia/Kolkata,2.34,725,6
+"Indian Astronomical Observatory, Hanle",32.7794,-281.03583,Asia/Kolkata,2,4486,1
+"Aryabhatta Research Institute, India",29.36,-280.54361,Asia/Kolkata,3.6,2398,5
