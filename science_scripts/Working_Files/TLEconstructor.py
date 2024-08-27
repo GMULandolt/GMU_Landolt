@@ -7,7 +7,7 @@ from pytz import timezone
 from settings import parameters
 
 start_time = time.time()
-print("Simulating Sattelite Orbit...")
+print("Simulating Satellite Orbit...")
 # Load timescale
 ts = load.timescale()
 tscale = int((parameters.end - parameters.start) * 24 * 60 * 60 * 1000 + 1)

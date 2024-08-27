@@ -20,15 +20,16 @@ lon_loc = float(parameters.lon_loc)*(np.pi/180) # longitude of observer
 t_efficiency = float(parameters.t_eff) # telescope efficiency
 ccd_efficiency = float(parameters.ccd_eff) # CCD efficiency
 diam_t = float(parameters.t_diam) # diameter of telescope
+a_t = np.pi*(diam_t/2)**2 # area that the telescope is able to take in light
 lmbda_n = int(parameters.n) # determines which laser is being looked at (0 - 488nm, 1 - 785nm, 2 - 976nm, 3 - 1550nm)
 humidity = float(parameters.humidity)
 fob = 1 # frequency of blinking (in seconds)
-aod = 0.1 # aerosol optical depth
+aod = [0.055, 0.08, 0.06, 0.045, 0.045, 0.045, 0.035, 0.035]
 # aod varies w/ humidity, the code factors that in here
 if humidity >= 0.6:
-    aod = aod + 0.05
+    aod[lmbda_n] = aod[lmbda_n] + 0.05
 if humidity >= 0.8:
-    aod = aod + 0.05
+    aod[lmbda_n] = aod[lmbda_n] + 0.05
 
 z = data[:,5]*1e3 # extracting distance of observer to satellite in units of meters
 alt = data[:,4]*(np.pi/180) # altitude of satellite in sky at the center of the beam path
@@ -70,12 +71,13 @@ tflux = np.zeros(len(t))
 counts = np.zeros(len(t))
 I_final = np.zeros(len(t))
 counts_final = np.zeros(len(t))
+mag_final = np.zeros(len(t))
 
 MFD = 1e-5 # mode field diameter of optical fiber
 w_0 = MFD/2 # waist radius of the gaussian beam
-lmbda = [488e-9, 785e-9, 976e-9, 1550e-9] # wavelength of all four lasers
-P_0 = [0.25, 0.1, 0.5, 0.1] # power of all four lasers
-a_t = np.pi*(diam_t/2)**2 # area that the telescope is able to take in light
+lmbda = [355e-9, 488e-9, 655e-9, 785e-9, 976e-9, 1064e-9, 1310e-9, 1550e-9] # wavelength of all eight lasers
+P_0 = [0.003, 0.04, 0.05, 0.1, 0.1, 0.3, 0.5, 0.1] # power of all eight lasers
+zp = [417.5*10e-7*10000*a_t*1e10*lmbda[0], 632*10e-7*10000*a_t*1e10*lmbda[1], 217.7*10e-7*10000*a_t*1e10*lmbda[2], 112.6*10e-7*10000*a_t*1e10*lmbda[3], 31.47*10e-7*10000*a_t*1e10*lmbda[4], 31.47*10e-7*10000*a_t*1e10*lmbda[5], 31.47*10e-7*10000*a_t*1e10*lmbda[6], 11.38*10e-7*10000*a_t*1e10*lmbda[7]] # zero points of each laser
 
 ### CALCULATIONS ###
 
@@ -119,7 +121,7 @@ def r_coef(cs, d, N):
     scattering coefficient is found given the distance d from the satellite to the detector,
     and the amount of molecules N per cubic meter.
     """
-    r_coef = np.e**(-cs*N*d*(1/np.cos(theta)))
+    r_coef = np.e**(-cs*N*d)
     return r_coef
 
 ### CALCULATING INTENSITY WITH ATMOSPHERIC ABSORPTION ###
@@ -128,31 +130,59 @@ N = 1e44 / (((4/3)*np.pi*(6371000 + z_new)**3) - (4/3)*np.pi*(6371000)**3)# aver
 
 # rayleigh scattering cross sections for 488 nm for the five most abundant gases in the atmosphere
 if lmbda_n == 0:
+    cs_n2 = 23.82e-31
+    cs_o2 = 20.03e-31
+    cs_ar = 23e-31
+    cs_co2 = 70.70e-31
+    cs_ne = 1.01e-31
+
+# rayleigh scattering cross sections for 785 nm for the five most abundant gases in the atmosphere
+elif lmbda_n == 1:
     cs_n2 = 7.26e-31
     cs_o2 = 6.50e-31
     cs_ar = 7.24e-31
     cs_co2 = 23e-31
     cs_ne = 0.33e-31
 
-# rayleigh scattering cross sections for 785 nm for the five most abundant gases in the atmosphere
-elif lmbda_n == 1:
-    cs_n2 = 2.65e-31
-    cs_o2 = 2.20e-31
-    cs_ar = 2.38e-31
-    cs_co2 = 6.22e-31
-    cs_ne = 0.128e-31
-
 # rayleigh scattering cross sections for 976nm for the five most abundant gases in the atmosphere
 # these values are extrapolated assuming a direct 1/lambda^4 relationship
 elif lmbda_n == 2:
-    cs_n2 = 4.54e-32
-    cs_o2 = 4.06e-32
-    cs_ar = 4.53e-32
-    cs_co2 = 1.44e-31
-    cs_ne = 2.06e-33
+    cs_n2 = 2.24e-31
+    cs_o2 = 2.06e-31
+    cs_ar = 2.08e-31
+    cs_co2 = 7.28e-31
+    cs_ne = 0.103e-31
 
 # rayleigh scattering cross sections for 1550nm for the five most abundant gases in the atmosphere
 # these values are extrapolated assuming a direct 1/lambda^4 relationship
+elif lmbda_n == 3:
+    cs_n2 = 2.65e-31
+    cs_o2 = 2.2e-31
+    cs_ar = 2.38e-31
+    cs_co2 = 6.22e-31
+    cs_ne = 0.128e-31
+    
+elif lmbda_n == 4:
+    cs_n2 = 1.11e-31
+    cs_o2 = 0.92e-31
+    cs_ar = 0.97e-31
+    cs_co2 = 2.6e-31
+    cs_ne = 0.128e-31
+    
+elif lmbda_n == 5:
+    cs_n2 = 0.79e-31
+    cs_o2 = 0.65e-31
+    cs_ar = 0.68e-31
+    cs_co2 = 1.84e-31
+    cs_ne = 3.79e-33
+    
+elif lmbda_n == 6:
+    cs_n2 = 0.34e-31
+    cs_o2 = 0.28e-31
+    cs_ar = 0.30e-31
+    cs_co2 = 0.8e-31
+    cs_ne = 1.65e-33
+    
 else:
     cs_n2 = 7.13e-33
     cs_o2 = 6.39e-33
@@ -165,35 +195,42 @@ r_coef2 = 1 - r_coef(cs_o2, z_new, N*0.20946) # scattering coefficient from rayl
 r_coef3 = 1 - r_coef(cs_ar, z_new, N*0.00934) # scattering coefficient from rayleigh scattering for argon
 r_coef4 = 1 - r_coef(cs_co2, z_new, N*0.000397) # scattering coefficient from rayleigh scattering for co2
 r_coef5 = 1 - r_coef(cs_ne, z_new, N*1.818e-5) # scattering coefficient from rayleigh scattering for neon
-m_coef = 1 - np.ones(len(t))*np.e**(-aod*(1/np.cos(theta))) # transmission coefficient from mie scattering
+m_coef = 1 - np.ones(len(t))*np.e**(-aod[lmbda_n]) # transmission coefficient from mie scattering
 
 for i in range(len(t)):
     I_final[i] = (tflux[i] - tflux[i]*(m_coef[i]+r_coef1[i]+r_coef2[i]+r_coef3[i]+r_coef4[i]+r_coef5[i])*airmass[i])*t_efficiency # calculates flux observed at telescope
     counts_final[i] = ((I_final[i]*lmbda[lmbda_n])/(6.62607015e-34*299792458))*ccd_efficiency # total counts taken in
+    mag_final[i] = -2.5*np.log10(I_final[i]/zp[lmbda_n]) # relative magnitude calculated from vega zero points
 
 for i in range(int(fob/1e-3)):
     I_final[i::2*int(fob/1e-3)] = 0
     counts_final[i::2*int(fob/1e-3)] = 0
+    mag_final[i::2*int(fob/1e-3)] = 0
     
     
 I_final = I_final[0:len(t)]
 counts_final = counts_final[0:len(t)]
+mag_final = mag_final[0:len(t)]
 
 # code for outputting the array of flux values
 heading = np.array('Radiant Flux (W)',dtype='str')
-heading2 = np.array('Counts')
+heading2 = np.array('Counts per Second')
 heading3 = np.array('Airmass')
+heading4 = np.array('Magnitude')
 data = np.genfromtxt('satcoord.csv',dtype='str',delimiter=',') # inputs data file
 data = data[:,:6]
 I_final = np.asarray(I_final,dtype='str')
 counts_final = np.asarray(counts_final,dtype='str')
 airmass = np.asarray(airmass,dtype='str')
+mag_final = np.asarray(mag_final,dtype='str')
 I_final = np.insert(I_final[:],0,heading)
 counts_final = np.insert(counts_final[:],0,heading2)
 airmass = np.insert(airmass[:],0,heading3)
+mag_final = np.insert(mag_final[:],0,heading4)
 output = np.column_stack((data,I_final))
 output = np.column_stack((output,counts_final))
 output = np.column_stack((output,airmass))
+output = np.column_stack((output,mag_final))
 np.savetxt('satcoord.csv', output, fmt='%s', delimiter=',')
 
 
