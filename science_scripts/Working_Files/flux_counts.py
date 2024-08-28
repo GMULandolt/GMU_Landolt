@@ -72,12 +72,16 @@ counts = np.zeros(len(t))
 I_final = np.zeros(len(t))
 counts_final = np.zeros(len(t))
 mag_final = np.zeros(len(t))
+num_flux = np.zeros(len(t))
+num_counts = np.zeros(len(t))
+num_I_final = np.zeros(len(t))
+num_counts_final = np.zeros(len(t))
 
-MFD = 1e-5 # mode field diameter of optical fiber
-w_0 = MFD/2 # waist radius of the gaussian beam
+MFD = [2.5e-6, 2.8e-6, 4.2e-6, 4.7e-6, 5.3e-6, 6.2e-6, 6.8e-6, 9e-6] # mode field diameter of optical fiber
+w_0 = MFD[lmbda_n]/2 # waist radius of the gaussian beam
 lmbda = [355e-9, 488e-9, 655e-9, 785e-9, 976e-9, 1064e-9, 1310e-9, 1550e-9] # wavelength of all eight lasers
 P_0 = [0.003, 0.04, 0.05, 0.1, 0.1, 0.3, 0.5, 0.1] # power of all eight lasers
-zp = [417.5*10e-7*10000*a_t*1e10*lmbda[0], 632*10e-7*10000*a_t*1e10*lmbda[1], 217.7*10e-7*10000*a_t*1e10*lmbda[2], 112.6*10e-7*10000*a_t*1e10*lmbda[3], 31.47*10e-7*10000*a_t*1e10*lmbda[4], 31.47*10e-7*10000*a_t*1e10*lmbda[5], 31.47*10e-7*10000*a_t*1e10*lmbda[6], 11.38*10e-7*10000*a_t*1e10*lmbda[7]] # zero points of each laser
+zp = [417.5*1e-7*10000*a_t*1e10*lmbda[0]*1e-11, 632*1e-7*10000*a_t*1e10*lmbda[1]*1e-11, 217.7*1e-7*10000*a_t*1e10*lmbda[2]*1e-11, 112.6*1e-7*10000*a_t*1e10*lmbda[3]*1e-11, 31.47*1e-7*10000*a_t*1e10*lmbda[4]*1e-11, 31.47*1e-7*10000*a_t*1e10*lmbda[5]*1e-11, 31.47*1e-7*10000*a_t*1e10*lmbda[6]*1e-11, 11.38*1e-7*10000*a_t*1e10*lmbda[7]*1e-11] # zero points of each laser
 
 ### CALCULATIONS ###
 
@@ -87,7 +91,7 @@ z_r = (np.pi/lmbda[lmbda_n])*w_0**2 # raleigh range
 # calculates flux as a gaussian distribution for height above center of beam path given
 w_z0 = w_0*np.sqrt(1+(z[0]/z_r)**2) # beam radius at distance z
 FWHM = np.sqrt(2*np.log(2))*w_z0 # full width at half maximum of the beam profile for a given distance from the waist
-x = np.arange(d0 - diam_t/2, d0 + diam_t/2, 0.0001) # the distance on one direction perpendicular to the laser vector
+x = np.arange(d0 - diam_t/2, d0 + diam_t/2, 0.001) # the distance on one direction perpendicular to the laser vector
 theta = np.arctan(d0/z) # angle made between the normal of earth's surface and a beam of light landing a given distance away from the normal
 print('Calculating Gaussian distribution of flux...')
 for j in range(len(t)):
@@ -111,6 +115,20 @@ for i in range(len(t)):
     coeftemp = np.pi*(((diam_t/2) + d0)**2 - (-(diam_t/2) + d0)**2) / a_t # calculates fraction of distribution needed to be swept over to get an area a_t
     tflux[i] = tflux_temp[0]*(np.pi/coeftemp) # integrating over an angle that gives us an arclength of the diameter of the telescope
     counts[i] = (tflux[i]*lmbda[lmbda_n])/(6.62607015e-34*299792458) # total counts taken in
+print('Done!')
+
+print('Calculating flux received at telescope numerically... (this will take a while)') # finds the total flux over a given detector area numerically
+for i in range(len(t)):
+    num_flux_temp = 0
+    r_sum = 0
+    for j in range(len(dis_t) - 1):
+        def flux_fn(r): # defines the function for the distribution of light -> can be replaced with whatever
+            return I_0*((w_0/w_z[i])**2)*np.e**((-2*r**2)/w_z[i]**2)    
+        r_sum = flux_fn((dis_t[j+1] + dis_t[j])/2)*(dis_t[j+1] - dis_t[j]) # cycles through the area under the function of the distribution of light over the detector area
+        num_flux_temp = num_flux_temp + r_sum # adds all areas of the curve to each other
+    coeftemp = np.pi*(((diam_t/2) + (dis_t[0] + dis_t[len(dis_t)-1])/2)**2 - (-(diam_t/2) + (dis_t[0] + dis_t[len(dis_t)-1])/2)**2) / a_t # calculates fraction of distribution needed to be swept over to get an area a_t
+    num_flux[i] = d0*num_flux_temp*(np.pi/coeftemp) # multiplies the 2d slice by the angle calculated above, then by the distance from the center of the beam path to successfully integrate it
+    num_counts[i] = (num_flux[i]*lmbda[lmbda_n])/(6.62607015e-34*299792458) # converting flux to photoelectric counts
 print('Done!')
 
 # Functions for calculating the scattering coefficient
@@ -201,12 +219,17 @@ for i in range(len(t)):
     I_final[i] = (tflux[i] - tflux[i]*(m_coef[i]+r_coef1[i]+r_coef2[i]+r_coef3[i]+r_coef4[i]+r_coef5[i])*airmass[i])*t_efficiency # calculates flux observed at telescope
     counts_final[i] = ((I_final[i]*lmbda[lmbda_n])/(6.62607015e-34*299792458))*ccd_efficiency # total counts taken in
     mag_final[i] = -2.5*np.log10(I_final[i]/zp[lmbda_n]) # relative magnitude calculated from vega zero points
+    num_I_final[i] = (num_flux[i] - num_flux[i]*(m_coef[i]+r_coef1[i]+r_coef2[i]+r_coef3[i]+r_coef4[i]+r_coef5[i])*airmass[i])*t_efficiency # calculates numerical flux observed at telescope
+    num_counts_final[i] = ((num_I_final[i]*lmbda[lmbda_n])/(6.62607015e-34*299792458))*ccd_efficiency # conversion from numerically calculated flux to photoelectric counts
+    
+### FORMATTING FILE FOR EXPORT ###
 
 for i in range(int(fob/1e-3)):
     I_final[i::2*int(fob/1e-3)] = 0
     counts_final[i::2*int(fob/1e-3)] = 0
     mag_final[i::2*int(fob/1e-3)] = 0
-    
+    num_I_final[i::2*int(fob/1e-3)] = 0
+    num_counts_final[i::2*int(fob/1e-3)] = 0
     
 I_final = I_final[0:len(t)]
 counts_final = counts_final[0:len(t)]
