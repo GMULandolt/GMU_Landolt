@@ -146,6 +146,7 @@ elif 2.84  <= abs(RA[-1]-RA[0]) < 3.55:
     'CRVAL2': Dec_import, 
     'NAXIS2': width
     }
+    satzoom = 30
     print("For this image, 1px is 12.5 arcseconds")
 elif 2.27  <= abs(RA[-1]-RA[0]) < 2.84:
     w = astropy_wcs.WCS(header={
@@ -178,7 +179,7 @@ elif 2.27  <= abs(RA[-1]-RA[0]) < 2.84:
     'CRVAL2': Dec_import, 
     'NAXIS2': width
     }
-
+    satzoom = 30
     print("For this image, 1px is 10 arcseconds")
 elif 1.70  <= abs(RA[-1]-RA[0]) < 2.27:
     w = astropy_wcs.WCS(header={
@@ -211,7 +212,7 @@ elif 1.70  <= abs(RA[-1]-RA[0]) < 2.27:
     'CRVAL2': Dec_import, 
     'NAXIS2': width
     }
-
+    satzoom = 30
     print("For this image, 1px is 8 arcseconds")
 elif 1.13  <= abs(RA[-1]-RA[0]) < 1.70:
     w = astropy_wcs.WCS(header={
@@ -244,7 +245,7 @@ elif 1.13  <= abs(RA[-1]-RA[0]) < 1.70:
     'CRVAL2': Dec_import, 
     'NAXIS2': width
     }
-
+    satzoom = 30
     print("For this image, 1px is 6 arcseconds")
 elif 0.56  <= abs(RA[-1]-RA[0]) < 1.13:
     w = astropy_wcs.WCS(header={
@@ -277,7 +278,7 @@ elif 0.56  <= abs(RA[-1]-RA[0]) < 1.13:
     'CRVAL2': Dec_import, 
     'NAXIS2': width
     }
-
+    satzoom = 30
     print("For this image, 1px is 4 arcseconds")
 elif 0.28  <= abs(RA[-1]-RA[0]) < 0.56:
     w = astropy_wcs.WCS(header={
@@ -311,9 +312,9 @@ elif 0.28  <= abs(RA[-1]-RA[0]) < 0.56:
     'CRVAL2': Dec_import, 
     'NAXIS2': width
     }
-
+    satzoom = 35
     print("For this image, 1px is 2 arcseconds")
-elif 0.001 <= abs(RA[-1]-RA[0]) < 0.28:
+elif 0.1 <= abs(RA[-1]-RA[0]) < 0.28:
     w = astropy_wcs.WCS(header={
 	'BITPIX': 16,
     'WCSAXES': 2,           # Number of coordinate axes
@@ -344,9 +345,10 @@ elif 0.001 <= abs(RA[-1]-RA[0]) < 0.28:
     'CRVAL2': Dec_import, 
     'NAXIS2': width
     }
+    satzoom = 50
     print("For this image, 1px is 1 arcsecond")
-elif 0.00  <= abs(RA[-1]-RA[0]) < 0.001:
-    print("RA Tracking too small! Please limit the scale of the date to over 0.001 degrees.") 
+elif 0.00  <= abs(RA[-1]-RA[0]) < 0.1:
+    print("RA Tracking too small! Please limit the scale of the date to over 0.1 degrees.") 
 
 print ("INFO: WCS Header Created")
 
@@ -426,12 +428,12 @@ def Landoltplot(image,figsize=(15,15),cmap='inferno',scale=0.5,colorbar=False,he
         cbar = plt.colorbar(im,ax=ax)
 
 
-    ax.arrow(RA[0], Dec[0]+((1/50)*Dec[0]), (RA[-1]-RA[0]), (Dec[-1]-Dec[0]),
+    ax.arrow(RA[0], Dec[0]+((1/satzoom)*Dec[0]), (RA[-1]-RA[0]), (Dec[-1]-Dec[0]),
              head_width=0, head_length=0, 
             fc='green', ec='green', width=0.0003, 
             transform=ax.get_transform('icrs')) 
     
-    ax.arrow(RA[0], Dec[0]-((1/50)*Dec[0]), (RA[-1]-RA[0]), (Dec[-1]-Dec[0]), 
+    ax.arrow(RA[0], Dec[0]-((1/satzoom)*Dec[0]), (RA[-1]-RA[0]), (Dec[-1]-Dec[0]), 
              head_width=0, head_length=0, 
             fc='green', ec='green', width=0.0003, 
             transform=ax.get_transform('icrs')) 
