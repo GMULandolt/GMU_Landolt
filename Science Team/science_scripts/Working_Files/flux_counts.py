@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.integrate import quad
 from settings import parameters
+import sys
 
 """
 CODE FOR COMPUTING THE EXPECTED COUNTS AT A DETECTOR FROM THE LANDOLT SATELLITE WITH NO ATMOSPHERIC ABSORPTION
@@ -90,6 +91,9 @@ z_r = (np.pi/lmbda[lmbda_n])*w_0**2 # raleigh range
 
 # calculates flux as a gaussian distribution for height above center of beam path given
 w_z0 = w_0*np.sqrt(1+(z[0]/z_r)**2) # beam radius at distance z
+if d0 > w_z0:
+    print('Error: Observer Outside Beam Path')
+    sys.exit()
 FWHM = np.sqrt(2*np.log(2))*w_z0 # full width at half maximum of the beam profile for a given distance from the waist
 x = np.arange(d0 - diam_t/2, d0 + diam_t/2, 0.001) # the distance on one direction perpendicular to the laser vector
 theta = np.arctan(d0/z) # angle made between the normal of earth's surface and a beam of light landing a given distance away from the normal
