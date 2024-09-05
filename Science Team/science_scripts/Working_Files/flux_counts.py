@@ -2,6 +2,7 @@ import numpy as np
 from scipy.integrate import quad
 from settings import parameters
 import sys
+import matplotlib.pyplot as plt
 
 """
 CODE FOR COMPUTING THE EXPECTED COUNTS AT A DETECTOR FROM THE LANDOLT SATELLITE WITH NO ATMOSPHERIC ABSORPTION
@@ -77,6 +78,8 @@ num_flux = np.zeros(len(t))
 num_counts = np.zeros(len(t))
 num_I_final = np.zeros(len(t))
 num_counts_final = np.zeros(len(t))
+t_reqd = np.zeros(len(t))
+num_t_reqd = np.zeros(len(t))
 
 MFD = [2.5e-6, 2.8e-6, 4.2e-6, 4.7e-6, 5.3e-6, 6.2e-6, 6.8e-6, 9e-6] # mode field diameter of optical fiber
 w_0 = MFD[lmbda_n]/2 # waist radius of the gaussian beam
@@ -225,7 +228,9 @@ for i in range(len(t)):
     mag_final[i] = -2.5*np.log10(I_final[i]/zp[lmbda_n]) # relative magnitude calculated from vega zero points
     num_I_final[i] = (num_flux[i] - num_flux[i]*(m_coef[i]+r_coef1[i]+r_coef2[i]+r_coef3[i]+r_coef4[i]+r_coef5[i])*airmass[i])*t_efficiency # calculates numerical flux observed at telescope
     num_counts_final[i] = ((num_I_final[i]*lmbda[lmbda_n])/(6.62607015e-34*299792458))*ccd_efficiency # conversion from numerically calculated flux to photoelectric counts
-    
+    t_reqd[i] = 4.4e5 / counts_final[i] # amount of seconds needed to observe 4.4e5 counts
+    num_t_reqd[i] = 4.4e5 / num_counts_final[i] # same as above but for the numerical counts
+
 ### FORMATTING FILE FOR EXPORT ###
 
 for i in range(int(fob/1e-3)):
@@ -244,21 +249,22 @@ heading = np.array('Radiant Flux (W)',dtype='str')
 heading2 = np.array('Counts per Second')
 heading3 = np.array('Airmass')
 heading4 = np.array('Magnitude')
+heading5 = np.array('Recommended Exposure Time (s)')
 data = np.genfromtxt('satcoord.csv',dtype='str',delimiter=',') # inputs data file
 data = data[:,:6]
 I_final = np.asarray(I_final,dtype='str')
 counts_final = np.asarray(counts_final,dtype='str')
 airmass = np.asarray(airmass,dtype='str')
 mag_final = np.asarray(mag_final,dtype='str')
+t_reqd = np.asarray(t_reqd,dtype='str')
 I_final = np.insert(I_final[:],0,heading)
 counts_final = np.insert(counts_final[:],0,heading2)
 airmass = np.insert(airmass[:],0,heading3)
 mag_final = np.insert(mag_final[:],0,heading4)
+t_reqd = np.insert(t_reqd[:],0,heading5)
 output = np.column_stack((data,I_final))
 output = np.column_stack((output,counts_final))
 output = np.column_stack((output,airmass))
 output = np.column_stack((output,mag_final))
+output = np.column_stack((output,t_reqd))
 np.savetxt('satcoord.csv', output, fmt='%s', delimiter=',')
-
-
-
