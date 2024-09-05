@@ -22,3 +22,15 @@ nav button.navbar-toggler {
 .content {
     min-height: 75vh;
 }
+
+body  {
+    background-color: #2e2c33;
+  }
+
+.icon-tle {
+    background: url('/static/img/tle-removebg-preview.png') no-repeat;
+    background-size: cover;
+    display: inline-block;
+    height: 100px;
+    width: 100px;
+}
