@@ -14,7 +14,7 @@ dataxyz = np.genfromtxt('satcoordxyz.csv',delimiter=',',skip_header=1) # inputs 
 
 ### VARIABLES ###
 
-tdelta = parameters.tdelta # increment of time in the file loaded in
+tdelta = parameters.tdelta/1000 # increment of time in the file loaded in
 lat_obs = parameters.lat*(np.pi/180) # latitude of the center of the beam path
 lon_obs = parameters.lon*(np.pi/180) # longitude of the center of the beam path
 lat_loc = float(parameters.lat_loc)*(np.pi/180) # latitude of observer
@@ -25,7 +25,6 @@ diam_t = float(parameters.t_diam) # diameter of telescope
 a_t = np.pi*(diam_t/2)**2 # area that the telescope is able to take in light
 lmbda_n = int(parameters.n) # determines which laser is being looked at (0 - 488nm, 1 - 785nm, 2 - 976nm, 3 - 1550nm)
 humidity = float(parameters.humidity)
-ccd_sat = float(parameters.ccd_sat)
 fob = 1 # frequency of blinking (in seconds)
 aod = [0.055, 0.08, 0.06, 0.045, 0.045, 0.045, 0.035, 0.035]
 # aod varies w/ humidity, the code factors that in here
@@ -253,7 +252,7 @@ heading3 = np.array('Airmass')
 heading4 = np.array('Magnitude')
 heading5 = np.array('Recommended Exposure Time (s)')
 data = np.genfromtxt('satcoord.csv',dtype='str',delimiter=',') # inputs data file
-data = data[:,:6]
+data = data[:,:7]
 I_final = np.asarray(I_final,dtype='str')
 counts_final = np.asarray(counts_final,dtype='str')
 airmass = np.asarray(airmass,dtype='str')
