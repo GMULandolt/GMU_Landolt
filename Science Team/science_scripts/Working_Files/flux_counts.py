@@ -14,7 +14,7 @@ dataxyz = np.genfromtxt('satcoordxyz.csv',delimiter=',',skip_header=1) # inputs 
 
 ### VARIABLES ###
 
-tdelta = parameters.tdelta # increment of time in the file loaded in
+tdelta = parameters.tdelta/1000 # increment of time in the file loaded in
 lat_obs = parameters.lat*(np.pi/180) # latitude of the center of the beam path
 lon_obs = parameters.lon*(np.pi/180) # longitude of the center of the beam path
 lat_loc = float(parameters.lat_loc)*(np.pi/180) # latitude of observer
@@ -81,10 +81,10 @@ num_counts_final = np.zeros(len(t))
 t_reqd = np.zeros(len(t))
 num_t_reqd = np.zeros(len(t))
 
-MFD = [2.5e-6, 2.8e-6, 4.2e-6, 4.7e-6, 5.3e-6, 6.2e-6, 6.8e-6, 9e-6] # mode field diameter of optical fiber
+MFD = [2.5e-6, 3.5e-6, 4e-6, 5e-6, 5.9e-6, 6.2e-6, 9.2e-6, 10.4e-6] # mode field diameter of optical fiber
 w_0 = MFD[lmbda_n]/2 # waist radius of the gaussian beam
 lmbda = [355e-9, 488e-9, 655e-9, 785e-9, 976e-9, 1064e-9, 1310e-9, 1550e-9] # wavelength of all eight lasers
-P_0 = [0.003, 0.04, 0.05, 0.1, 0.1, 0.3, 0.5, 0.1] # power of all eight lasers
+P_0 = [0.003, 0.04, 0.05, 0.0636, 0.45, 0.3, 0.5, 0.1] # power of all four lasers
 zp = [417.5*1e-7*10000*a_t*1e10*lmbda[0]*1e-11, 632*1e-7*10000*a_t*1e10*lmbda[1]*1e-11, 217.7*1e-7*10000*a_t*1e10*lmbda[2]*1e-11, 112.6*1e-7*10000*a_t*1e10*lmbda[3]*1e-11, 31.47*1e-7*10000*a_t*1e10*lmbda[4]*1e-11, 31.47*1e-7*10000*a_t*1e10*lmbda[5]*1e-11, 31.47*1e-7*10000*a_t*1e10*lmbda[6]*1e-11, 11.38*1e-7*10000*a_t*1e10*lmbda[7]*1e-11] # zero points of each laser
 
 ### CALCULATIONS ###
@@ -100,6 +100,7 @@ if d0 > w_z0:
 FWHM = np.sqrt(2*np.log(2))*w_z0 # full width at half maximum of the beam profile for a given distance from the waist
 x = np.arange(d0 - diam_t/2, d0 + diam_t/2, 0.001) # the distance on one direction perpendicular to the laser vector
 theta = np.arctan(d0/z) # angle made between the normal of earth's surface and a beam of light landing a given distance away from the normal
+
 print('Calculating Gaussian distribution of flux...')
 for j in range(len(t)):
     z_new[j] = (z[j]+(0.00008*d0))/np.cos(theta[j]) # amount of distance a given light ray travels factoring in the curvature of the earth
@@ -120,7 +121,7 @@ for i in range(len(t)):
         return r*I_0*((w_0/w_z[i])**2)*np.e**((-2*r**2)/w_z[i]**2)
     tflux_temp = quad(flux_fn, -(diam_t/2) + d0, (diam_t/2) + d0) # flux taken in by a given telescope
     coeftemp = np.pi*(((diam_t/2) + d0)**2 - (-(diam_t/2) + d0)**2) / a_t # calculates fraction of distribution needed to be swept over to get an area a_t
-    tflux[i] = tflux_temp[0]*(np.pi/coeftemp) # integrating over an angle that gives us an arclength of the diameter of the telescope
+    tflux[i] = tflux_temp[0]*(2*np.pi/coeftemp) # integrating over an angle that gives us an arclength of the diameter of the telescope
     counts[i] = (tflux[i]*lmbda[lmbda_n])/(6.62607015e-34*299792458) # total counts taken in
 print('Done!')
 
@@ -134,7 +135,7 @@ for i in range(len(t)):
         r_sum = flux_fn((dis_t[j+1] + dis_t[j])/2)*(dis_t[j+1] - dis_t[j]) # cycles through the area under the function of the distribution of light over the detector area
         num_flux_temp = num_flux_temp + r_sum # adds all areas of the curve to each other
     coeftemp = np.pi*(((diam_t/2) + (dis_t[0] + dis_t[len(dis_t)-1])/2)**2 - (-(diam_t/2) + (dis_t[0] + dis_t[len(dis_t)-1])/2)**2) / a_t # calculates fraction of distribution needed to be swept over to get an area a_t
-    num_flux[i] = d0*num_flux_temp*(np.pi/coeftemp) # multiplies the 2d slice by the angle calculated above, then by the distance from the center of the beam path to successfully integrate it
+    num_flux[i] = d0*num_flux_temp*(2*np.pi/coeftemp) # multiplies the 2d slice by the angle calculated above, then by the distance from the center of the beam path to successfully integrate it
     num_counts[i] = (num_flux[i]*lmbda[lmbda_n])/(6.62607015e-34*299792458) # converting flux to photoelectric counts
 print('Done!')
 
@@ -251,7 +252,7 @@ heading3 = np.array('Airmass')
 heading4 = np.array('Magnitude')
 heading5 = np.array('Recommended Exposure Time (s)')
 data = np.genfromtxt('satcoord.csv',dtype='str',delimiter=',') # inputs data file
-data = data[:,:6]
+data = data[:,:7]
 I_final = np.asarray(I_final,dtype='str')
 counts_final = np.asarray(counts_final,dtype='str')
 airmass = np.asarray(airmass,dtype='str')
