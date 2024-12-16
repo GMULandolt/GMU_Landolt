@@ -55,11 +55,14 @@ sat_z = dataxyz[:,2] # z position of satellite in GCRS coordinates
 sat_lat = datalatlon[:,0] # latitude of satellite projected to earth
 sat_lon = datalatlon[:,1] # longitude of satellite projected to earth
 r_sat = np.sqrt(sat_x**2 + sat_y**2 + sat_z**2)*1e3 # distance from satellite to the center of the earth in meters
-orient_xsat = r_sat*np.sin((np.pi/2) - sat_lat)*np.cos(sat_lon) # location of the satellite in the x direction in lat/lon coordinates
-orient_ysat = r_sat*np.sin((np.pi/2) - sat_lat)*np.sin(sat_lon) # similarly for the y direction
-orient_zsat = r_sat*np.cos((np.pi/2) - sat_lat) # similarly for the z direction
+orient_xsat = 6371000*np.sin((np.pi/2) - sat_lat)*np.cos(sat_lon) # location of the satellite in the x direction in lat/lon coordinates
+orient_ysat = 6371000*np.sin((np.pi/2) - sat_lat)*np.sin(sat_lon) # similarly for the y direction
+orient_zsat = 6371000*np.cos((np.pi/2) - sat_lat) # similarly for the z direction
+orient_xsat = orient_xsat - orient_x
+orient_ysat = orient_ysat - orient_y
+orient_zsat = orient_zsat - orient_z
 d0 = np.sqrt(orient_xloc**2 + orient_yloc**2 + orient_zloc**2) # distance of observer from center of beam path
-beta = np.arccos(((orient_xloc*orient_xsat) + (orient_yloc*orient_ysat) + (orient_zloc*orient_zsat))/(d0*r_sat)) # angle between a line made between the center of the beam path and observer and the satellite-to-center of beam path vector projected on to earth's surface
+beta = np.arccos(((orient_xloc*orient_xsat) + (orient_yloc*orient_ysat) + (orient_zloc*orient_zsat))/(d0*np.sqrt(orient_xsat**2 + orient_ysat**2 + orient_zsat**2))) # angle between a line made between the center of the beam path and observer and the satellite-to-center of beam path vector projected on to earth's surface
 if d0 < diam_t/2:
     d0 = diam_t/2 # fixes error where starting at zero creates invalid variables, sets distance from center of the beam path to the radius of the telescope at the very minimum
 
@@ -80,11 +83,13 @@ num_I_final = np.zeros(len(t))
 num_counts_final = np.zeros(len(t))
 t_reqd = np.zeros(len(t))
 num_t_reqd = np.zeros(len(t))
+curve_theta = np.zeros(len(t))
 
 MFD = [2.5e-6, 3.5e-6, 4e-6, 5e-6, 5.9e-6, 6.2e-6, 9.2e-6, 10.4e-6] # mode field diameter of optical fiber
 w_0 = MFD[lmbda_n]/2 # waist radius of the gaussian beam
 lmbda = [355e-9, 488e-9, 655e-9, 785e-9, 976e-9, 1064e-9, 1310e-9, 1550e-9] # wavelength of all eight lasers
 P_0 = [0.003, 0.04, 0.05, 0.0636, 0.45, 0.3, 0.5, 0.1] # power of all four lasers
+#P_0 = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
 zp = [417.5*1e-7*10000*a_t*1e10*lmbda[0]*1e-11, 632*1e-7*10000*a_t*1e10*lmbda[1]*1e-11, 217.7*1e-7*10000*a_t*1e10*lmbda[2]*1e-11, 112.6*1e-7*10000*a_t*1e10*lmbda[3]*1e-11, 31.47*1e-7*10000*a_t*1e10*lmbda[4]*1e-11, 31.47*1e-7*10000*a_t*1e10*lmbda[5]*1e-11, 31.47*1e-7*10000*a_t*1e10*lmbda[6]*1e-11, 11.38*1e-7*10000*a_t*1e10*lmbda[7]*1e-11] # zero points of each laser
 
 ### CALCULATIONS ###
@@ -103,7 +108,8 @@ theta = np.arctan(d0/z) # angle made between the normal of earth's surface and a
 
 print('Calculating Gaussian distribution of flux...')
 for j in range(len(t)):
-    z_new[j] = (z[j]+(0.00008*d0))/np.cos(theta[j]) # amount of distance a given light ray travels factoring in the curvature of the earth
+    curve_theta[j] = np.arctan(d0/6371000)
+    z_new[j] = (z[j]+(6371000-6371000*np.cos(curve_theta[j])))/np.cos(theta[j]) # amount of distance a given light ray travels factoring in the curvature of the earth
     if alt0 <= alt[j]: # identifies if observer is closer or further from the satellite using its relative altitude in the sky
         z_new[j] = z_new[j] - d0*np.tan(alpha[j])*np.sin(beta[j])
     else:
@@ -124,7 +130,7 @@ for i in range(len(t)):
     tflux[i] = tflux_temp[0]*(2*np.pi/coeftemp) # integrating over an angle that gives us an arclength of the diameter of the telescope
     counts[i] = (tflux[i]*lmbda[lmbda_n])/(6.62607015e-34*299792458) # total counts taken in
 print('Done!')
-
+"""
 print('Calculating flux received at telescope numerically... (this will take a while)') # finds the total flux over a given detector area numerically
 for i in range(len(t)):
     num_flux_temp = 0
@@ -138,7 +144,7 @@ for i in range(len(t)):
     num_flux[i] = d0*num_flux_temp*(2*np.pi/coeftemp) # multiplies the 2d slice by the angle calculated above, then by the distance from the center of the beam path to successfully integrate it
     num_counts[i] = (num_flux[i]*lmbda[lmbda_n])/(6.62607015e-34*299792458) # converting flux to photoelectric counts
 print('Done!')
-
+"""
 # Functions for calculating the scattering coefficient
 
 def r_coef(cs, d, N):
@@ -269,3 +275,4 @@ output = np.column_stack((output,airmass))
 output = np.column_stack((output,mag_final))
 output = np.column_stack((output,t_reqd))
 np.savetxt('satcoord.csv', output, fmt='%s', delimiter=',')
+
