@@ -1,5 +1,6 @@
 #Elizabeth Lillehei
 
+#GMU Landolt Image simulations
 #--------------------------------------------------------------------------------------------------------------------
 # IMPORTS
 #--------------------------------------------------------------------------------------------------------------------
@@ -73,38 +74,9 @@ RA_import = find_middle(RA)
 Dec_import = find_middle(Dec)
 
 print("The length of the imported CSV File is {}".format(len(data)))
-print("If the CSV file is over 10,000 you may encounter long wait times \n")
+print("If the CSV file is over 10,000 lines you may encounter long wait times \n")
 
-print ("INFO: SPACECRAFT DATA IMPORTED")
-#--------------------------------------------------------------------------------------------------------------------
-# SIMBAD REGION QUERY
-#--------------------------------------------------------------------------------------------------------------------
-
-
-
-#      First, RA, h   m  s      Dec,  d  m  s 
-# Coord = SkyCoord('0   37  41.1       -33 42 59', unit=(u.hourangle, u.deg), frame='fk5') 
-# query_results = Simbad.query_region(Coord, radius =queryrad)
-
-
-# print(query_results)
-
-
-# object_main_id = query_results[0]['MAIN_ID']
-# object_coords = SkyCoord(ra=query_results['RA'], dec=query_results['DEC'], 
-#                           unit=(u.hourangle, u.deg), frame='icrs')
-
-
-
-# query_params = { 
-#      'hips': Database,
-#      'object': object_main_id, 
-#      'ra': object_coords[0].ra.value, 
-#      'dec': object_coords[0].dec.value, 
-#      'fov': (resolution1 * u.arcmin).to(u.deg).value, 
-#      'width': width, 
-#      'height': height
-# }
+print ("SPACECRAFT DATA IMPORTED")
 
 #--------------------------------------------------------------------------------------------------------------------
 # HIPS2FITS QUERY FOR FITS FILE
@@ -314,7 +286,7 @@ elif 0.28  <= abs(RA[-1]-RA[0]) < 0.56:
     }
     satzoom = 35
     print("For this image, 1px is 2 arcseconds")
-elif 0.1 <= abs(RA[-1]-RA[0]) < 0.28:
+elif 0.01 <= abs(RA[-1]-RA[0]) < 0.28:
     w = astropy_wcs.WCS(header={
 	'BITPIX': 16,
     'WCSAXES': 2,           # Number of coordinate axes
@@ -347,10 +319,10 @@ elif 0.1 <= abs(RA[-1]-RA[0]) < 0.28:
     }
     satzoom = 50
     print("For this image, 1px is 1 arcsecond")
-elif 0.00  <= abs(RA[-1]-RA[0]) < 0.1:
+elif 0.00  <= abs(RA[-1]-RA[0]) < 0.01:
     print("RA Tracking too small! Please limit the scale of the date to over 0.1 degrees.") 
 
-print ("INFO: WCS Header Created")
+print ("WCS Header Created")
 
 result = hips2fits.query_with_wcs(
     hips=Database,
@@ -358,7 +330,7 @@ result = hips2fits.query_with_wcs(
     get_query_payload=False,
 )
 
-print ("INFO: Fits file imported")
+print ("Fits file imported")
 
 
 #--------------------------------------------------------------------------------------------------------------------
@@ -396,18 +368,7 @@ wcs_landolt = astropy_wcs.WCS(header1)
 #--------------------------------------------------------------------------------------------------------------------
 # GRAB AND MODIFY FITS FILE
 #--------------------------------------------------------------------------------------------------------------------
-print ("INFO: file grabbed for modification")
-
-
-# fig = plt.figure(figsize=(10, 10), frameon=False)
-# ax = plt.subplot(projection=wcs_landolt)
-
-#          head_width=0, head_length=0, 
-#          fc='red', ec='red', width=0.003, 
-#          transform=ax.get_transform('icrs'))
-# plt.text(RA[-1], -4.075, '0.1 deg', 
-#          color='white', rotation=90, 
-#          transform=ax.get_transform('icrs'))
+print ("\nFile grabbed for modification")
 
 def Landoltplot(image,figsize=(15,15),cmap='inferno',scale=0.5,colorbar=False,header=None,wcsplot=None,**kwargs):
     fig = plt.figure(figsize=figsize)
@@ -417,7 +378,7 @@ def Landoltplot(image,figsize=(15,15),cmap='inferno',scale=0.5,colorbar=False,he
     dvmin = mu - scale*s
     dvmax = mu + scale*s
     if all(['vmin','vmax']) in kwargs.keys():
-       im = ax.imshow(image,origin='lower',cmap=cmap,vmin=kwargs['vmin'],vmax=kwargs['vmax'])
+        im = ax.imshow(image,origin='lower',cmap=cmap,vmin=kwargs['vmin'],vmax=kwargs['vmax'])
     elif 'vmin' in kwargs.keys():
         im = ax.imshow(image,origin='lower',cmap=cmap,vmin=kwargs['vmin'],vmax=dvmax)
     elif 'vmax' in kwargs.keys():
@@ -438,17 +399,9 @@ def Landoltplot(image,figsize=(15,15),cmap='inferno',scale=0.5,colorbar=False,he
             fc='green', ec='green', width=0.0003, 
             transform=ax.get_transform('icrs')) 
     
-
-    # ax.arrow(RA[0], Dec[0], (RA[-1]-RA[0]), (Dec[-1]-Dec[0]), 
-    #          head_width=0, head_length=0, 
-    #         fc='red', ec='red', width=0.0003, 
-    #         transform=ax.get_transform('icrs'))
-
-    # for i in range(0,len(data)):
-    #     if R_Flux[i] == 0:
-    #         ax.scatter(RA[i],Dec[i], s=0.0001, marker=".", edgecolors=None, alpha= 0, transform=ax.get_transform('icrs'))
-    #     else:
-    #         ax.scatter(RA[i],Dec[i], s=0.0001, marker=".", edgecolors=None, transform=ax.get_transform('icrs'))
+    for i in range(0,len(data)):
+        if R_Flux[i] != 0:
+            ax.plot(RA[i],Dec[i], marker=".", transform=ax.get_transform('icrs'))
 
 
     
@@ -456,12 +409,160 @@ def Landoltplot(image,figsize=(15,15),cmap='inferno',scale=0.5,colorbar=False,he
     overlay.grid(color='white', ls='dotted')
     plt.xlabel(r'RA')
     plt.ylabel(r'Dec')
-    plt.savefig("Image_sim.png")
-    plt.show()
+    plt.savefig("First_Observing_Mode.png")
     return fig, ax    
 
 
 
 Landoltplot(image1,scale=0.5, colorbar=True,wcsplot=wcs_landolt, vmin=-4.677, vmax=10)
 
-print ("INFO: PNGs Created! Closing code.")
+print("Satellite tracking done!\n")
+
+print ("Secondary Tracking Mode Starting")
+
+
+def optimize_satellite_points(ra, dec, min_distance=0.001):
+    """Select optimal points for querying based on minimum angular separation"""
+    points = list(zip(ra, dec))
+    selected = [points[0]]  # Always include first point
+    
+    for point in points[1:]:
+        last_selected = selected[-1]
+        # Calculate angular separation
+        separation = np.sqrt((point[0] - last_selected[0])**2 + 
+                           (point[1] - last_selected[1])**2)
+        if separation >= min_distance:
+            selected.append(point)
+    
+    return np.array(selected)
+
+def create_tracking_composite(satellite_data, wcs_base, database='CDS/P/2MASS/K'):
+    """
+    Creates a composite image from multiple hips2fits queries based on tracking mode.
+    """
+    # Initialize composite image array
+    composite = np.zeros((1024, 1024))
+    
+    # Optimize points for querying
+    points = optimize_satellite_points(
+        satellite_data['RA'], 
+        satellite_data['Dec'],
+        min_distance=abs(wcs_base.wcs.cdelt[0]) * 2  # Use twice the pixel scale as minimum separation
+    )
+    
+    print(f"\nGenerating tracking composite image\nThis may take a while...")
+    
+    
+    # Progress bar setup
+    bar_width = 50
+    total_steps = len(points)
+    print("Progress: [" + " " * bar_width + "] 0%", end='\r')
+    
+    # Preallocate memory for image data
+    current_image = np.zeros((1024, 1024))
+    
+    for i, (center_ra, center_dec) in enumerate(points):
+        # Update progress bar
+        progress = int((i + 1) * 100 / total_steps)
+        filled_width = int(bar_width * (i + 1) / total_steps)
+        bar = "=" * filled_width + " " * (bar_width - filled_width)
+        print(f"Progress: [{bar}] {progress}%", end='\r')
+        
+        # Create WCS for this position
+        w_header = {
+            'WCSAXES': 2,
+            'CTYPE1': 'RA---TAN',
+            'CTYPE2': 'DEC--TAN',
+            'CRPIX1': 512,
+            'CRPIX2': 512,
+            'CRVAL1': center_ra,
+            'CRVAL2': center_dec,
+            'CDELT1': wcs_base.wcs.cdelt[0],
+            'CDELT2': wcs_base.wcs.cdelt[1],
+            'NAXIS1': 1024,
+            'NAXIS2': 1024,
+            'CUNIT1': 'deg',
+            'CUNIT2': 'deg'
+        }
+        
+        w = astropy_wcs.WCS(w_header)
+        
+        try:
+            # Query hips2fits
+            result = hips2fits.query_with_wcs(
+                hips=database,
+                wcs=w,
+                get_query_payload=False,
+            )
+            
+            # Get image data efficiently
+            if isinstance(result, fits.HDUList):
+                current_image = result[0].data
+                result.close()
+            else:
+                with fits.open(result) as hdul:
+                    current_image = hdul[0].data.copy()
+            
+            # Normalize using vectorized operations
+            current_image = np.nan_to_num(current_image, nan=0.0)
+            max_val = np.max(current_image)
+            if max_val > 0:
+                current_image /= max_val
+            
+            
+            # For satellite tracking, add entire stellar field
+            composite += current_image
+            
+            # Clear memory
+            current_image.fill(0)
+            
+        except Exception as e:
+            print(f"\nWarning: Failed to process position {i}: {e}")
+            continue
+    
+    print("\nComposite image generation complete!     ")
+    return composite
+
+
+def plot_composite(composite, wcs, satellite_data):
+    """Plot the composite image with appropriate scaling and labels"""
+    fig = plt.figure(figsize=(15, 15))
+    ax = plt.subplot(projection=wcs)
+    
+
+   
+    scaled_composite = np.log1p(composite)  # log scaling to handle bright points
+    
+    # Plot with different color schemes based on mode
+    im = ax.imshow(scaled_composite, origin='lower', cmap='inferno')
+    # Mark satellite position
+    center_idx = len(satellite_data['RA']) // 2
+    ax.plot(satellite_data['RA'][center_idx], satellite_data['Dec'][center_idx],
+            'r*', markersize=10, transform=ax.get_transform('icrs'))
+    
+    # Add coordinate grid
+    overlay = ax.get_coords_overlay('icrs')
+    overlay.grid(color='white', ls='dotted')
+    
+    plt.colorbar(im, ax=ax, label='Log(intensity)')
+    plt.xlabel('RA')
+    plt.ylabel('Dec')
+    plt.title(f'Second Observing Mode')
+    
+    return fig, ax
+
+
+satellite_data = {
+    'RA': RA,
+    'Dec': Dec,
+    'R_Flux': R_Flux
+}
+
+# Generate Image
+
+composite = create_tracking_composite(satellite_data, wcs_landolt)
+fig, ax = plot_composite(composite, wcs_landolt, satellite_data)
+plt.savefig(f'Second_Observing_mode.png')
+plt.close()
+
+print("Secondary Tracking mode finished!")
