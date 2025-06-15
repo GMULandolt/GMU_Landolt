@@ -1,3 +1,5 @@
+#NOTE: This entire script along with the flux, image sim, and settings code need to be put into jupiter notebooks and made runnable. Documentation must be completed
+
 import time
 import numpy as np
 from sgp4.api import Satrec, WGS72
@@ -8,15 +10,19 @@ from pytz import timezone
 from settings import parameters
 import math
 
-
+#This functions acts as an add on to calculate the solid angle overlap of the earth and the sun. This way we can calcualte how much of the sun is eclipsed by the earth.
+#However, since the script calculates single array elements instead of a whole array it is very inefficient
+#Allowing numpy to run these calculations would be far more efficient, and may drastically decrase runtime especially for the orbit searcher
 def eclipse(satpos, earthpos, sunpos):
 
+    #Nere we fetch planet positions at each time step and draw vectlrs tl each
     satpos = Barycentric(satpos + earthpos).position.au
     satsun = sunpos - satpos
     satearth = earthpos - satpos
     satsundist = np.linalg.norm(satsun)
     satearthdist = np.linalg.norm(satearth)
 
+    #calculating solid angle
     asun = math.atan(0.00465047/satsundist)
     aearth = math.atan(4.26354e-5/satearthdist)
     theta = math.acos(np.vdot(satsun, satearth)/(satearthdist * satsundist))    
