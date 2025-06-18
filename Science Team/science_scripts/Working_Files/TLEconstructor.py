@@ -10,31 +10,35 @@ from pytz import timezone
 from settings import parameters
 import math
 
-#This functions acts as an add on to calculate the solid angle overlap of the earth and the sun. This way we can calcualte how much of the sun is eclipsed by the earth.
-#However, since the script calculates single array elements instead of a whole array it is very inefficient
-#Allowing numpy to run these calculations would be far more efficient, and may drastically decrase runtime especially for the orbit searcher
+#This functions acts as an add on to calculate the solid angle overlap of the earth and the sun. This way we can calcualte how much of the sun is eclipsed by the earth and predict umbra/penubra
+#However, since the script calculates single array elements instead of a whole array at once, it is very inefficient
+#Allowing numpy to run these calculations would be far more efficient, and may drastically decrase runtime especially for the orbit propigator packeged elsewhere (which is a branch of this code)
 def eclipse(satpos, earthpos, sunpos):
 
-    #Nere we fetch planet positions at each time step and draw vectlrs tl each
+    #Nere we fetch planet positions at each time step and draw vectlrs to each
     satpos = Barycentric(satpos + earthpos).position.au
     satsun = sunpos - satpos
     satearth = earthpos - satpos
     satsundist = np.linalg.norm(satsun)
     satearthdist = np.linalg.norm(satearth)
 
-    #calculating solid angle
+    #calculating solid angle. I have no idea where those values for tan came from, will need to return to comment
     asun = math.atan(0.00465047/satsundist)
     aearth = math.atan(4.26354e-5/satearthdist)
     theta = math.acos(np.vdot(satsun, satearth)/(satearthdist * satsundist))    
     sunsolid = math.pi * asun ** 2
     earthsolid = math.pi * aearth ** 2
 
+    #edge cases for whether or not to actually calculate the solid angle to save on runtime
     if (asun > theta + aearth):
         return str(round(earthsolid/sunsolid * 100)) + "%"
     elif (theta > asun + aearth or math.isclose(asun + aearth, theta)):
         return "0%"
     elif (aearth > asun + theta or math.isclose(asun + theta, aearth)):
         return "100%"
+    #This is my own derivation of the problem, however a simple explanation of the problem can be found here https://www.youtube.com/watch?v=mMYCyeGVKUo
+    #Will need to return when documenting to write up a mathmatical derivation
+    #Fairly costly, however we luckly only run this code for a few minutes as the satelite is in penumbra
     else:
         a = (math.cos(aearth) - (math.cos(asun)*math.cos(theta)))/math.sin(theta)
         b = (math.sin(asun)**2 - a**2)**0.5
@@ -63,6 +67,7 @@ def eclipse(satpos, earthpos, sunpos):
             digon = 2*math.pi - 2*(psi1 + psi2) - phi1 * math.cos(asun) - phi2 * math.cos(aearth)
         
         return str(round(digon/sunsolid * 100)) + "%"
+    #dead code, should never fail unless inputs are fucked up. Only present for if
     return "fail"
 
 
@@ -79,18 +84,20 @@ def eclipse(satpos, earthpos, sunpos):
 
 
 
-
+#begining of script, we calculate runtime
 start_time = time.time()
 print("Simulating Satellite Orbit...")
-# Load timescale
+
 ts = load.timescale()
+#Calculating number of timesteps to calculate in the miliseconds
 tscale = int((parameters.end - parameters.start) * 24 * 60 * 60 * 1000 + 1)
 
+#loading the ephemeri of the sun and earth is intesive so its out here instead of the eclipse script
 eph = load('de421.bsp')
 sun, earth = eph['sun'], eph['earth']
 
 
-# Initialize satellite using SGP4
+# Initialize satellite using SGP4, for more information see https://pypi.org/project/sgp4/#providing-your-own-elements
 sat = Satrec()
 sat.sgp4init(
     WGS72,           # gravity model
@@ -109,12 +116,13 @@ sat.sgp4init(
 #    0.00872664625, #meo
     parameters.nodeo                # nodeo: right ascension of ascending node (radians)
 )
+#If TLE is present it will be used instead
 if (parameters.tle1 != "NA" or parameters.tle2 != "NA"):
     sat = Satrec.twoline2rv(parameters.tle1, parameters.tle2)
 # Convert Satrec object to EarthSatellite object
 sat = EarthSatellite.from_satrec(sat, ts)
 
-# Define the location of GMU Observatory
+# Define the location of Observatory
 obs = wgs84.latlon(parameters.lat, parameters.lon, parameters.elev)
 # Vector between sat and obs
 difference = sat - obs
@@ -128,7 +136,7 @@ difference = sat - obs
 
 
 
-
+#This chunking serves as a way for large amounts of time steps to be generated in 1 
 chunk_size = parameters.tdelta * parameters.chunks
 num_chunks = int(tscale/chunk_size)
 satcords = np.zeros((num_chunks, 3, int(chunk_size / parameters.tdelta)), object)
