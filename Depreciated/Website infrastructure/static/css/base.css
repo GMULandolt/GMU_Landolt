@@ -1,0 +1,36 @@
+nav {
+    /* background-color: rgb(0, 0, 0); */
+    background-image: url('/static/img/stars.jpg');
+    background-size: cover;
+    background-position: center;
+    background-color: rgb(0, 24, 65);
+    margin-bottom: 10px;
+}
+
+nav a.nav-link {
+    color: white;
+}
+
+nav button.navbar-toggler {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.align-right {
+    text-align: right;
+}
+
+.content {
+    min-height: 75vh;
+}
+
+body  {
+    background-color: #000000;
+  }
+
+.icon-tle {
+    background: url('/static/img/tle-removebg-preview.png') no-repeat;
+    background-size: cover;
+    display: inline-block;
+    height: 100px;
+    width: 100px;
+}
