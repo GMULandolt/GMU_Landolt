@@ -1,3 +1,6 @@
+#This script takes in the settings.json to act as input parameters for the rest of the scripts within this project. The idea to edit parameters in the json
+#For variables which are not defined in the JSON, default parameters are used as defined within this script
+
 import json
 from datetime import datetime
 from pytz import timezone
