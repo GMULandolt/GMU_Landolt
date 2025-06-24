@@ -8,7 +8,8 @@ geostationary satellites is generally <0.5" in RA/Dec.
 
 Can be run as a standalone script or imported as a function:
     >>> from half_rate_tle import generate_half_rate_tle
-    >>> tle, error = generate_half_rate_tle(TLE)
+    >>> input_tle = "<YOUR TLE HERE>"
+    >>> half_rate_tle, error = generate_half_rate_tle(input_tle)
 """
 
 # Use the most recent TLE for best results: https://celestrak.org/NORAD/elements
