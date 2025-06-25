@@ -1,4 +1,4 @@
-#This script takes in the settings.json to act as input parameters for the rest of the scripts within this project. The idea to edit parameters in the json
+#This script takes in the settings.json to act as input parameters for the rest of the scripts within this project.
 #For variables which are not defined in the JSON, default parameters are used as defined within this script
 
 import json
@@ -10,7 +10,7 @@ import re
 
 class Settings:
     def __init__(self):
-        
+        #default parameter dictionary
         d = {"epoch": 0,
              "bstar": 0,
              "ndot": 0,
@@ -40,15 +40,16 @@ class Settings:
              "lon_loc": "-77.3075",
              "humidity": "0.5"}
 
+        #this sets the object attributes to the default values
         for k, v in d.items():
             setattr(self, k, v) 
-        
+        #replaces the objects default parametrs with any given value
         with open('settings.json') as f:
             variables = json.load(f)
         for key, value in variables.items():
             if value is not None and value != "":
                 setattr(self, key, value)
-        
+        #uses regex to setup syntax used by future scripts for time keeping
         stimes = re.split("[-\s:]", self.start)
         itimes = [int(i) for i in stimes]
         time = datetime(itimes[0], itimes[1], itimes[2], itimes[3], itimes[4], itimes[5])
