@@ -136,7 +136,16 @@ difference = sat - obs
 
 
 
-#This chunking serves as a way for large amounts of time steps to be generated in 1 
+#This chunking serves as a way for large amounts of time steps to be generated in single runs of the for loop.
+#For some reason sgp4 cannot actually compute more than something like 10000 time intervals at once which is the point of the chuncking
+#This chunking system has a fairly big bug where if the chuncks do not perfectly line up with the time intervals requested, it will fail
+#to out put the remaining time since it won't load the final chunk
+#EXAMPLE: 
+#input - chunk size = 3, start = 1, end = 8
+#output - 1, 2, 3, 4, 5, 6
+#         |______| |_____|  ...
+#          chunk 1  chunk 2  no chunk 3
+#As you can see times 7 and 8 were never output.
 chunk_size = parameters.tdelta * parameters.chunks
 num_chunks = int(tscale/chunk_size)
 satcords = np.zeros((num_chunks, 3, int(chunk_size / parameters.tdelta)), object)
