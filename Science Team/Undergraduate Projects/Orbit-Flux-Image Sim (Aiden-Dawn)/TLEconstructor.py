@@ -158,7 +158,7 @@ temptime = np.zeros((num_chunks, int(chunk_size / parameters.tdelta)), object)
 
 for i in range(num_chunks):
     #Here we set an array of skyfield time objects to calculate positions at
-    #
+    #the given chunked time arrays. We also convert the time into the given timezone after
    t = ts.utc(parameters.start.utc.year, \
               parameters.start.utc.month, \
               parameters.start.utc.day, \
@@ -168,7 +168,7 @@ for i in range(num_chunks):
    timelist[i] = t
    temptime[i] = t.astimezone(timezone(parameters.timezone))
    
-   
+   #Calculating sattelite and observatory position at given time
    satcord = sat.at(t)
    obscoord = obs.at(t)
    satcords[i] = satcord.position.km
@@ -176,23 +176,30 @@ for i in range(num_chunks):
    lat, lon = wgs84.latlon_of(satcord)
    satlatlon[i] = [lat.degrees, lon.degrees]
    
-   
+   #here is where we feed back into the eclipse function, calculating the posititions in array form.
+   #This for loop is where I'm fairly sure the runtime is
+   #getting caught during extensive runs. Running through each individual time
+   #instead of letting numpy handle the entire array calculation is the issue.
    satpos = satcord.position.au
    sunpos = sun.at(t).position.au
    earthpos = earth.at(t).position.au
    for j in range(len(satpos[1])):
        eclipsepec[j + i*len(satpos[1])] = eclipse(satpos[:,j], earthpos[:,j], sunpos[:,j])
-   
+
+    #Calculating actual important info thats output for traking sattelite.
    topocentric = difference.at(t)
    ra, dec, distance = topocentric.radec()
    alt, az, trash = topocentric.altaz()
    tempdf[i] = np.array([ra._degrees, dec.degrees, az.degrees, alt.degrees, distance.km])
-          
+
+    #Just a useful check for how long its taking
    print('\r' + str(int(i/num_chunks * 10000)/100) + "%", end='', flush=True)
+
 
 temptime = temptime.flatten()
 print('\r' + "100.00%\n", end='', flush=True)  
 
+#Output to data files for the input of future scripts and data analysis
 df1 = pd.DataFrame({'Time (EST)': temptime, 
                    'RA (Deg)': tempdf[:, 0, :].flatten(), 'Dec (Deg)': tempdf[:, 1, :].flatten(),
                    'Az (Deg)': tempdf[:, 2, :].flatten(), 'Alt (Deg)': tempdf[:, 3, :].flatten(),
@@ -205,6 +212,7 @@ df.to_csv('satlatlon.csv', index=False)
 df = pd.DataFrame({'X': satcords[:, 0, :].flatten(), 'Y': satcords[:, 1, :].flatten(), 'Z': satcords[:, 2, :].flatten()})
 df.to_csv('satcoordxyz.csv', index=False)
 
+#End output to let know run is finished
 end_time = time.time()
 print("Simulation run complete and data stored...")
 print('Execution time = %.6f seconds' % (end_time-start_time))
