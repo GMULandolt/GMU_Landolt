@@ -1,2 +1,2 @@
-python TLEconstructor.py && python flux_counts.py && python image-sim.py
+python TLEconstructor.py && python flux_counts.py && python image-sim-updated.py
 pause
