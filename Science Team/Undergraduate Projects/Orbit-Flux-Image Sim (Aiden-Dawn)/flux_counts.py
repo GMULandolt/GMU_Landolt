@@ -25,10 +25,7 @@ diam_t = float(parameters.t_diam) # diameter of telescope
 a_t = np.pi*(diam_t/2)**2 # area that the telescope is able to take in light
 lmbda_n = int(parameters.n) # determines which laser is being looked at (0 - 488nm, 1 - 785nm, 2 - 976nm, 3 - 1550nm)
 humidity = float(parameters.humidity)
-<<<<<<< HEAD
 #ccd_sat = float(parameters.ccd_sat)
-=======
->>>>>>> 05a0b6733bb3725c0039aaa153275abb920bccc3
 fob = 1 # frequency of blinking (in seconds)
 aod = [0.055, 0.08, 0.06, 0.045, 0.045, 0.045, 0.035, 0.035]
 # aod varies w/ humidity, the code factors that in here
