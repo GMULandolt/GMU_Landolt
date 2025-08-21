@@ -10,7 +10,7 @@ from astropy.convolution import Gaussian2DKernel
 from astropy.convolution import convolve, convolve_fft
 from astropy.coordinates import SkyCoord
 data = np.genfromtxt('satcoord.csv',delimiter=',',skip_header=1) # inputs data file from orbit and flux simulations
-with fits.open(r"C:\Users\acpie\Desktop\landolt\model-bias-image.fit") as hdul:  # opens mobdel bias image
+with fits.open("model-bias-image.fit") as hdul:  # opens mobdel bias image
     bias_data = hdul[0].data  # assume the first extension is an image
     
 ra_sat = data[:,1] # simulated right ascention data from landolt
