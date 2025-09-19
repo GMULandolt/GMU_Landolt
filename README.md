@@ -5,8 +5,8 @@ This repository is a collection of scripts that have been developed, maintained,
 ## 📁 Repository Organization
 
 - All files currently in **active use or development** should remain in the working directory.
-- Files that are **no longer in active use or development** must be moved to the `depreciated/` folder located at the root level.
-  - The `depreciated/` folder mirrors the structure of the working directory.
+- Files that are **no longer in active use or development** must be moved to the `Deprecated/` folder located at the root level.
+  - The `Deprecated/` folder mirrors the structure of the working directory.
 
 ## 📚 Documentation
 
