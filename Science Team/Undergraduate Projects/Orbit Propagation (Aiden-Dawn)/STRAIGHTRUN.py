@@ -12,7 +12,8 @@ from shapely.geometry import Point
 import geopandas as gpd
 from geopandas import GeoDataFrame
 import geodatasets
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt 
+import json
 
 def eclipse(satpos, earthpos, sunpos):
 
@@ -75,7 +76,7 @@ def eclipse(satpos, earthpos, sunpos):
 
 
 
-def func (inc, eccen, node):
+def func():
     # Load timescale
     ts = load.timescale()
     tscale = int((parameters.end - parameters.start) * 24 * 60 * 60 * 1000 + 1)
@@ -94,14 +95,14 @@ def func (inc, eccen, node):
         parameters.bstar,           # bstar: drag coefficient (/earth radii)
         parameters.ndot,           # ndot: ballistic coefficient (radians/minute^2)
         parameters.nddot,             # nddot: second derivative of mean motion (radians/minute^3)
-        eccen,             # ecco: eccentricity
+        parameters.ecco,             # ecco: eccentricity
         parameters.argpo,               # argpo: argument of perigee (radians)
-        inc,               # inclo: inclination (radians)
+        parameters.inclo,               # inclo: inclination (radians)
         parameters.mo,               # mo: mean anomaly (radians)
         parameters.no_kozai,  # no_kozai: mean motion (radians/minute) GEO
     #    0.04908738521, #LEO
     #    0.00872664625, #meo
-        node                # nodeo: right ascension of ascending node (radians)
+        parameters.nodeo                # nodeo: right ascension of ascending node (radians)
     )
 
     if (parameters.tle1 != "NA" or parameters.tle2 != "NA"):
@@ -196,12 +197,17 @@ def func (inc, eccen, node):
                     'Palomar Alt (Deg)': obstempdf[:, 6, :].flatten(), 'Palomar Az (Deg)': obstempdf[:, 7, :].flatten(),  'Palomar TIME': obstempdf[:, 8, :].flatten(),
                     'SNIFFS Alt (Deg)': obstempdf[:, 9, :].flatten(), 'SNIFFS Az (Deg)': obstempdf[:, 10, :].flatten(),  'SNIFFS TIME': obstempdf[:, 11, :].flatten()})
     obsdf["Eclipse %"] = eclipsepec.flatten().tolist()
-
+    obsdf.to_csv('output/observation-parameters.csv', index=False)
+    gungus = parameters.__dict__.copy()
+    gungus['start'] = str(gungus['start'].astimezone(timezone(parameters.timezone)))[:-6]
+    gungus['end'] = str(gungus['end'].astimezone(timezone(parameters.timezone)))[:-6]
+    with open("output/settings.json", "w") as file:
+        json.dump(gungus, file, indent=4) # indent for pretty printing
     return obsdf
 
 
-func(3.141592653589793238, 0, 232.9*(np.pi/180))
-
+#func(3.141592653589793238, 0, 232.9*(np.pi/180))
+func()
 
 df = pd.read_csv("satlatlon.csv", delimiter=',', skiprows=0, low_memory=False)
 
@@ -213,3 +219,4 @@ gdf = GeoDataFrame(df, geometry=geometry)
 world = gpd.read_file(geodatasets.data.naturalearth.land['url'])
 gdf.plot(ax=world.plot(figsize=(10, 6)), marker='o', color='red', markersize=15)
 plt.savefig("world.png")
+
