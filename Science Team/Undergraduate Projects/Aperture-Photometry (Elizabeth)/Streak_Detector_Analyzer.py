@@ -67,7 +67,7 @@ class FitsStreakDetector:
 
             elongation = np.sqrt(eigvals.max()) / np.sqrt(eigvals.min() + 1e-6)
             if elongation < 5.0:
-                continue  # Skip nearly circular features (likely satellites)
+                continue  # Skip nearly circular features (satellites)
 
             projections = np.dot(coords_centered, direction)
             min_proj = np.min(projections)
@@ -183,7 +183,8 @@ class FitsStreakDetector:
             streak.cheaty = cy
             streak.L = length
             streak.theta = angle_rad
-            streak.totalmag = 0  # Needed by simpill
+            streak.exp_t = fits.FitsHDU(self.image_data).header.get('EXPTIME', 1)
+            streak.totalmag = 0 
 
             try:
                 self.streak_interface.simpill(cy, cx, r=6.0, L=length, angle=angle_rad, streak=streak, visout=False)
@@ -418,8 +419,8 @@ class FitsStreakDetector:
     def run(self):
         self.load_image()
         self.detect_streaks(sigma_threshold=3.0, min_length_pixels=50)
-        #self.analyze_streak()
-        #self.save_results_to_csv("streak_analysis_results.csv")
+        # self.analyze_streak()
+        # self.save_results_to_csv("streak_analysis_results.csv")
 
 
     # Starting point
