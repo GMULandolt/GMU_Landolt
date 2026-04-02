@@ -1,0 +1,15 @@
+!$$SOF
+ COMMAND     = 'TLE'                 ! Input asteroid/comet NOT in JPL database
+ MAKE_EPHEM  = 'YES'               ! Make an ephemeris
+ EPHEM_TYPE  = 'S'                 ! Set ephemeris type to SPK
+ OBJ_DATA    = 'NO'                ! Suppress object data-sheet
+ START_TIME  = '2024-Jan-1'        ! Start time (TDB)
+ STOP_TIME   = '2025-Jan-1'        ! Stop time (TDB)
+ STEP_SIZ = '1d'
+ TLE = '
+ LANDOLT
+ 1 51287U 21118E   24150.60553120  .00000018  00000-0  00000-0 0  9999
+ 2 51287   2.2643  87.2510 0005201  45.0933 314.5319  1.01256418  8740'
+
+ 
+!$$EOF
