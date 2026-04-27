@@ -2,10 +2,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from astropy.io import fits
-from scipy.ndimage import rotate, gaussian_filter, label, map_coordinates
+from astropy.wcs import WCS
+from astropy.wcs.utils import proj_plane_pixel_scales
+from scipy.ndimage import rotate, gaussian_filter, label, map_coordinates, find_objects
 from skimage.feature import match_template, peak_local_max
 from skimage.filters import threshold_otsu
 from sklearn.neighbors import BallTree
+from scipy.ndimage import binary_closing, binary_opening
+from scipy.signal import fftconvolve
+
 import os
 
 class FourierStreakDetector:
@@ -16,9 +21,6 @@ class FourierStreakDetector:
         ----------
         fits_path : str
             Path to the FITS file.
-        saturation_percentile : float
-            Pixels above this percentile are considered saturated.
-
         min_box_separation : float
             Minimum fractional overlap allowed between the template bounding
             box and any *other* streak bounding box (0 = no overlap required).
@@ -52,7 +54,11 @@ class FourierStreakDetector:
         # Exposure / streak-length estimate
         self.exposure_time_s = None      # from FITS header (seconds)
         self.pixel_scale_arcsec = None   # arcsec/pixel from FITS header
-        self.expected_streak_length_px = None
+        self.expected_streak_length_px = None # Derived from template shape
+        
+        # --- exposure-based length ---
+        self.theoretical_streak_length_px = None 
+        self.use_exposure_length = False # Keep False to preserve current behavior!
 
     # ------------------------------------------------------------------
     # 1.  LOADING
@@ -84,10 +90,14 @@ class FourierStreakDetector:
         self.image_data = ((self.image_data - np.median(self.image_data))
                            / np.std(self.image_data))
         print("FITS image loaded and normalised.")
+        
+        # Now that we have exposure time and pixel scale, calculate the theoretical length!
+        self._estimate_streak_length_from_exposure()
 
     def _parse_exposure_info(self):
-        """Pulls exposure time and pixel scale from the FITS header."""
+        """Pulls exposure time and pixel scale from the FITS header using WCS if plate-solved."""
         h = self.header
+        
         # Common exposure-time keywords
         for key in ('EXPTIME', 'EXPOSURE', 'EXPTIMED', 'EXP_TIME'):
             if key in h:
@@ -97,62 +107,65 @@ class FourierStreakDetector:
         if self.exposure_time_s is None:
             print("  WARNING: No exposure-time keyword found in header.")
 
-        # Pixel scale – try CDELT or CD matrix
+        # Pixel scale – Try hardcoded keys first
         if 'CDELT2' in h:
             self.pixel_scale_arcsec = abs(float(h['CDELT2'])) * 3600.0
         elif 'CD2_2' in h:
             self.pixel_scale_arcsec = abs(float(h['CD2_2'])) * 3600.0
+        else:
+            # Fallback: Let Astropy's WCS solve for the pixel scale matrix natively
+            try:
+                w = WCS(h)
+                if w.has_celestial:
+                    # proj_plane_pixel_scales returns degrees/pixel. Multiply by 3600 to get arcsec/px
+                    scales = proj_plane_pixel_scales(w) * 3600.0
+                    self.pixel_scale_arcsec = float(np.mean(scales))
+            except Exception as e:
+                print(f"  WARNING: Astropy WCS could not extract pixel scale: {e}")
+
         if self.pixel_scale_arcsec:
             print(f"  Pixel scale: {self.pixel_scale_arcsec:.4f} arcsec/px")
 
-    # ------------------------------------------------------------------
-    # 2.  EXPOSURE / STREAK-LENGTH ESTIMATION
-    # ------------------------------------------------------------------
-    def estimate_streak_length(self,
-                                object_rate_deg_per_s=0.0042,
-                                fallback_length_px=50):
+    def _estimate_streak_length_from_exposure(self, expected_angular_velocity_arcsec_s=15.0):
         """
-        Estimates the expected streak length in pixels.
-
+        Calculates theoretical streak length from exposure time and pixel scale.
+        
+        Formula: 
+        Length [px] = (Velocity [arcsec/s] * Exposure [s]) / Pixel Scale [arcsec/px]
+        
         Parameters
         ----------
-        object_rate_deg_per_s
-            Angular rate of the object on the sky (degrees/second).
-            
-        fallback_length_px : int
-            Used if exposure time or pixel scale cannot be determined.
+        expected_angular_velocity_arcsec_s : float
+            Expected angular velocity of the streak in arcseconds per second.
+            Defaults to 15.0 arcsec/s (Typical for GEO satellites on a sidereal 
+            tracking mount, or stars on a stationary mount).
         """
-        if self.exposure_time_s and self.pixel_scale_arcsec:
-            # angular distance covered during exposure (arcsec)
-            angular_distance_arcsec = object_rate_deg_per_s * 3600.0 * self.exposure_time_s
-            self.expected_streak_length_px = angular_distance_arcsec / self.pixel_scale_arcsec
-            print(f"  Expected streak length: {self.expected_streak_length_px:.1f} px "
-                  f"(rate={object_rate_deg_per_s} °/s, "
-                  f"exptime={self.exposure_time_s} s, "
-                  f"scale={self.pixel_scale_arcsec:.4f} \"/px)")
-        else:
-            self.expected_streak_length_px = fallback_length_px
-            print(f"  Expected streak length (fallback): {self.expected_streak_length_px} px")
-        return self.expected_streak_length_px
+        if self.exposure_time_s is None or self.pixel_scale_arcsec is None:
+            print("  Cannot calculate theoretical length: Missing exposure time or pixel scale.")
+            self.theoretical_streak_length_px = None
+            return
+
+        self.theoretical_streak_length_px = (expected_angular_velocity_arcsec_s * self.exposure_time_s) / self.pixel_scale_arcsec
+        print(f"  Theoretical streak length calculated: {self.theoretical_streak_length_px:.1f} px "
+              f"(@ {expected_angular_velocity_arcsec_s} arcsec/s)")
 
     # ------------------------------------------------------------------
-    # 3.  TEMPLATE CREATION  (with rejection colour-coding)
+    # 2.  TEMPLATE CREATION  (with rejection colour-coding)
     # ------------------------------------------------------------------
-    def _create_template_from_image(self, min_length=100, padding=10):
+    def _create_template_from_image(self, min_area=40, padding=10, max_width_std=4.0):
         """
-        Finds the best (most elongated) streak for use as a template,
-        while rejecting candidates that are:
-          • too close to the image edge   → 'edge'   (red)
-          • too saturated                 → 'saturated' (purple)
-          • overlapping another streak box→ 'overlap' (blue)
-          • lower prominence than chosen  → 'prominence' (yellow)
+        Finds the best (most elongated) streak for use as a template.
         """
         if self.image_data is None:
             raise RuntimeError("Image data not loaded.")
 
         print("Creating binary mask to find best streak template...")
-        thresh = threshold_otsu(self.image_data)
+        # Otsu thresholding fails on sparse astronomical images. 
+        # Using a high percentile strictly isolates the bright signal (stars/streaks).
+        
+        thresh = np.percentile(self.image_data, 99.0)
         binary_mask = self.image_data > thresh
+        binary_mask = binary_closing(binary_mask, structure=np.ones((3,3)))
         labeled_image, num_features = label(binary_mask)
 
         if num_features == 0:
@@ -161,11 +174,27 @@ class FourierStreakDetector:
         ih, iw = self.image_data.shape
         features = []
 
+        # Extract slices for each label
+        slices = find_objects(labeled_image)
+
         # ---- collect all candidate features ----
-        for i in range(1, num_features + 1):
-            coords = np.argwhere(labeled_image == i)   # (y, x)
-            if len(coords) < min_length:
+        for i, slc in enumerate(slices):
+            if slc is None:
                 continue
+                
+            label_id = i + 1
+            
+            # Extract just the tiny bounding box of the feature from the labeled image
+            sub_labeled = labeled_image[slc]
+            
+            # Find coordinates within this tiny bounding box
+            local_coords = np.argwhere(sub_labeled == label_id)
+            if len(local_coords) < min_area:
+                continue
+                
+            # Shift coordinates back up to global image space
+            y_start, x_start = slc[0].start, slc[1].start
+            coords = local_coords + np.array([y_start, x_start])
 
             cov = np.cov(coords.T)
             if np.isnan(cov).any():
@@ -180,16 +209,14 @@ class FourierStreakDetector:
             y_max, x_max = coords.max(axis=0)
             bbox = (y_min, y_max, x_min, x_max)
 
-            # Mean intensity within the bounding box
-            mean_intensity = self.image_data[y_min:y_max+1,
-                                             x_min:x_max+1].mean()
-            max_intensity  = self.image_data[y_min:y_max+1,
-                                             x_min:x_max+1].max()
+            mean_intensity = self.image_data[y_min:y_max+1, x_min:x_max+1].mean()
+            max_intensity  = self.image_data[y_min:y_max+1, x_min:x_max+1].max()
 
             features.append({
-                'label':        i,
+                'label':        label_id,
                 'coords':       coords,
                 'elongation':   elongation,
+                'eigvals':      eigvals,
                 'eigvecs':      eigvecs,
                 'bbox':         bbox,
                 'mean_int':     mean_intensity,
@@ -200,21 +227,41 @@ class FourierStreakDetector:
         if not features:
             raise ValueError("No valid features after initial filtering.")
 
-        # Sort descending by elongation so we evaluate best first
-        features.sort(key=lambda f: f['elongation'], reverse=True)
+        # Sort descending by PHYSICAL LENGTH (variance along principal axis) to find the longest, most robust streak!
+        # (Elongation is too vulnerable to tiny 3x1 pixel noise artifacts having near-infinite elongation)
+        features.sort(key=lambda f: f['eigvals'][1], reverse=True)
 
         # ---- apply rejection criteria ----
         valid_features = []
+        
+        edge_margin = 15
+
         for f in features:
             y_min, y_max, x_min, x_max = f['bbox']
 
+            # 1. Edge Rejection (Don't build templates from edge artifacts)
+            if (x_min < edge_margin or x_max > iw - edge_margin or
+                y_min < edge_margin or y_max > ih - edge_margin):
+                f['rejection'] = 'edge'
+                continue
+
+            # 2. Circular Object Rejection (Must be stretched)
+            if f['elongation'] < 3.0: 
+                f['rejection'] = 'circular'
+                continue
+                
+            # 3. Blob / "Too Wide" Rejection (Nukes massive galaxies and bright blobs)
+            width_std = np.sqrt(f['eigvals'][0])
+            if width_std > max_width_std: 
+                f['rejection'] = 'too_wide'
+                continue
 
             valid_features.append(f)
 
         if not valid_features:
-            raise ValueError("All features were rejected (saturation).")
+            raise ValueError("All features were rejected (edge, circular, or too blobby).")
 
-        # Overlap check – mark features whose box overlaps the best box
+        # Overlap check – mark features whose box overlaps the chosen best box
         chosen = valid_features[0]
         cy1, cy2, cx1, cx2 = chosen['bbox']
 
@@ -227,6 +274,8 @@ class FourierStreakDetector:
                 f['rejection'] = 'overlap'
 
         # Remaining valid (not overlapping) non-chosen → 'prominence'
+        # (It is NORMAL for the rest of the good streaks to be yellow in Plot 1, 
+        # because Plot 1 is only picking the SINGLE best template!)
         for f in valid_features[1:]:
             if f['rejection'] is None:
                 f['rejection'] = 'prominence'
@@ -235,6 +284,11 @@ class FourierStreakDetector:
 
         # ---- build the template from 'chosen' ----
         self.template_coords = chosen['coords']
+        primary_variance = chosen['eigvals'][1]
+        self.expected_streak_length_px = np.sqrt(12 * primary_variance)
+        print(f"Calculated universal streak length from template: {self.expected_streak_length_px:.1f} px")
+        
+        # Get angle from eigenvector
         eigvecs = chosen['eigvecs']
         v = eigvecs[:, -1]
         self.best_template_angle = np.degrees(np.arctan2(v[0], v[1]))
@@ -260,10 +314,10 @@ class FourierStreakDetector:
               f"(elongation={chosen['elongation']:.2f})")
 
     # ------------------------------------------------------------------
-    # 4.  STREAK DETECTION
+    # 3.  STREAK DETECTION
     # ------------------------------------------------------------------
     def detect_streaks_by_template(self,
-                                   threshold_sigma=3.5,
+                                   threshold_sigma=2.5,
                                    streak_length=None,
                                    min_distance=10):
         """
@@ -275,16 +329,21 @@ class FourierStreakDetector:
 
         self._create_template_from_image()
 
-        # Use estimated length if available
+        #Use theoretical exposure length if toggled ON
         if streak_length is None:
-            streak_length = (self.expected_streak_length_px
-                             if self.expected_streak_length_px
-                             else 50)
+            if self.use_exposure_length and self.theoretical_streak_length_px is not None:
+                streak_length = self.theoretical_streak_length_px
+            else:
+                streak_length = (self.expected_streak_length_px
+                                 if self.expected_streak_length_px
+                                 else 50)
+        
         print(f"Using streak_length={streak_length:.1f} px for endpoint calculation.")
 
         print("Performing template match...")
-        self.correlation_map = match_template(
-            self.image_data, self.best_template, pad_input=True)
+        flipped_template = self.best_template[::-1, ::-1]
+        self.correlation_map = fftconvolve(
+            self.image_data, flipped_template, mode='same')
         print("Correlation map generated.")
 
         mean_c  = np.mean(self.correlation_map)
@@ -316,11 +375,25 @@ class FourierStreakDetector:
         for (x_c, y_c) in self.detected_peaks_coords:
             dx = half_len * cos_a
             dy = half_len * sin_a
-            self.streaks.append(((x_c - dx, y_c - dy),
-                                  (x_c + dx, y_c + dy)))
+            
+            x1, y1 = x_c - dx, y_c - dy
+            x2, y2 = x_c + dx, y_c + dy
+            
+            # Grab the correlation value for prominence filtering
+            corr_val = self.correlation_map[int(y_c), int(x_c)]
+            
+            self.streaks.append({
+                'endpoints': ((x1, y1), (x2, y2)),
+                'center': (x_c, y_c),
+                'bbox': (min(y1, y2), max(y1, y2), min(x1, x2), max(x1, x2)),
+                'corr_val': corr_val,
+                'rejection': None # Default is accepted
+            })
+            
+        self._filter_detected_streaks()
 
     # ------------------------------------------------------------------
-    # 5.  NEAREST-NEIGHBOUR ANALYSIS ON PEAKS
+    # 4.  NEAREST-NEIGHBOUR ANALYSIS ON PEAKS
     # ------------------------------------------------------------------
     def _nearest_neighbour_analysis(self):
         """
@@ -349,7 +422,7 @@ class FourierStreakDetector:
               f"max={self.nn_distances.max():.1f} px")
 
     # ------------------------------------------------------------------
-    # 6.  FFT INTERMEDIATES
+    # 5.  FFT INTERMEDIATES
     # ------------------------------------------------------------------
     def _calculate_fft_intermediates(self):
         print("Calculating FFT intermediates...")
@@ -372,16 +445,66 @@ class FourierStreakDetector:
         fft_product_shifted = np.fft.fftshift(fft_product)
         self.fft_product_log = np.log(np.abs(fft_product_shifted) + 1e-9)
 
+    def _filter_detected_streaks(self, edge_margin=5, saturation_percentile=99.0):
+        """
+        Filters the final streak list based on edge proximity, 
+        saturation, and overlaps.
+        """
+        ih, iw = self.image_data.shape
+                # Define saturation as anything above the 99.99th percentile.
+                # This is not a perfect method, you need to do photometric calibration to be sure, but it should catch the worst offenders.
+        saturation_limit = np.percentile(self.image_data, 99.99999)
+
+        # Sort by correlation value descending (process best matches first)
+        self.streaks.sort(key=lambda s: s['corr_val'], reverse=True)
+        max_corr = self.streaks[0]['corr_val']
+
+        for i, streak in enumerate(self.streaks):
+            y_min, y_max, x_min, x_max = streak['bbox']
+            x_c, y_c = streak['center']
+
+            # 1. Edge Rejection
+            if (x_min < edge_margin or x_max > iw - edge_margin or
+                y_min < edge_margin or y_max > ih - edge_margin):
+                streak['rejection'] = 'edge'
+                continue
+
+            # 2. Saturated Rejection
+            # Check maximum pixel intensity inside the streak's bounding box
+            box_max = self.image_data[int(max(0, y_min)):int(min(ih, y_max+1)),
+                                      int(max(0, x_min)):int(min(iw, x_max+1))].max()
+            if box_max > saturation_limit:
+                streak['rejection'] = 'saturated'
+                continue
+
+            # 3. Overlap Rejection
+            # Check against all PREVIOUSLY ACCEPTED streaks (since we sorted by best first)
+            for j in range(i):
+                prev_streak = self.streaks[j]
+                if prev_streak['rejection'] is None:
+                    py_min, py_max, px_min, px_max = prev_streak['bbox']
+                    inter_y = max(0, min(y_max, py_max) - max(y_min, py_min))
+                    inter_x = max(0, min(x_max, px_max) - max(x_min, px_min))
+                    if inter_y * inter_x > 0:
+                        streak['rejection'] = 'overlap'
+                        break
+
+            # 4. Prominence Rejection
+            # If it survived the above but its correlation is less than 50% of the absolute best streak
+            if streak['rejection'] is None and streak['corr_val'] < (max_corr * 0.5):
+                streak['rejection'] = 'prominence'
+
+
     # ------------------------------------------------------------------
-    # 7.  DIAGNOSTIC PLOTS
+    # 6.  DIAGNOSTIC PLOTS
     # ------------------------------------------------------------------
     _REJECTION_COLORS = {
         'prominence': 'yellow',
         'overlap':    'blue',
         'edge':       'red',
         'saturated':  'purple',
+        'circular':   'orange',
     }
-
     def display_diagnostics_plot_1(self):
         """Original image + template, with colour-coded rejected streaks."""
         fig, axs = plt.subplots(1, 2, figsize=(14, 7))
@@ -423,23 +546,15 @@ class FourierStreakDetector:
                 linestyle='--', label='Template box')
             axs[0].add_patch(rect)
 
-        # Deduplicate legend labels
-        seen = set()
-        unique_handles = []
-        for h in legend_handles:
-            lbl = h.get_label()
-            if lbl not in seen:
-                seen.add(lbl)
-                unique_handles.append(h)
-        if unique_handles:
-            axs[0].legend(handles=unique_handles, loc='upper right',
-                          markerscale=6, fontsize=8)
-
         # Add rejection legend key
         for reason, color in self._REJECTION_COLORS.items():
             axs[0].plot([], [], 's', color=color,
                         label=f'Rejected: {reason}')
-        axs[0].legend(loc='upper right', fontsize=7)
+            
+        # Deduplicate legend labels (prevents overflow from hundreds of points)
+        handles, labels = axs[0].get_legend_handles_labels()
+        by_label = dict(zip(labels, handles))
+        axs[0].legend(by_label.values(), by_label.keys(), loc='upper right', fontsize=7, markerscale=4)
 
         axs[0].set_title("1. Original Image – Template Selection")
 
@@ -453,7 +568,7 @@ class FourierStreakDetector:
 
         plt.tight_layout()
         plt.show()
-
+        
     def display_diagnostics_plot_2(self):
         """Correlation map with peaks, and with final streak overlays."""
         fig, axs = plt.subplots(1, 2, figsize=(14, 7))
@@ -483,8 +598,22 @@ class FourierStreakDetector:
             axs[0].legend(loc='upper right', fontsize=8)
 
             axs[1].imshow(self.correlation_map, cmap='viridis', origin='lower')
-            for (x1, y1), (x2, y2) in self.streaks:
-                axs[1].plot([x1, x2], [y1, y2], 'r-', lw=1.5, alpha=0.6)
+            for streak in self.streaks:
+                (x1, y1), (x2, y2) = streak['endpoints']
+                reason = streak['rejection']
+                
+                if reason is None or reason == 'prominence':
+                    color = 'lime' if reason is None else 'yellow'
+                    label = 'Accepted'
+                else:
+                    color = self._REJECTION_COLORS.get(reason, 'red')
+                    label = f'Rejected: {reason}'
+                    
+                axs[1].plot([x1, x2], [y1, y2], color=color, lw=1.5, alpha=0.8, label=label)
+            
+            handles, labels = axs[1].get_legend_handles_labels()
+            by_label = dict(zip(labels, handles))
+            axs[1].legend(by_label.values(), by_label.keys(), loc='upper right', fontsize=7)
             axs[1].set_title("4. Correlation Map & Final Detections")
             axs[1].set_xlim(0, self.image_data.shape[1])
             axs[1].set_ylim(0, self.image_data.shape[0])
@@ -536,7 +665,7 @@ class FourierStreakDetector:
             plt.show()
             return
 
-        (x1, y1), (x2, y2) = self.streaks[0]
+        (x1, y1), (x2, y2) = self.streaks[0]['endpoints']
         t = np.linspace(0, 1, profile_length)
         x_idx = x1 + (x2 - x1) * t
         y_idx = y1 + (y2 - y1) * t
@@ -564,32 +693,53 @@ class FourierStreakDetector:
         ax.imshow(self.image_data, cmap='gray', origin='lower',
                   vmin=np.percentile(self.image_data, 1),
                   vmax=np.percentile(self.image_data, 99))
-        for (x1, y1), (x2, y2) in self.streaks:
-            ax.plot([x1, x2], [y1, y2], 'r-', lw=1.5, alpha=0.8)
+        
+        accepted_count = 0
+        for streak in self.streaks:
+            (x1, y1), (x2, y2) = streak['endpoints']
+            reason = streak['rejection']
+            if reason is None:
+                accepted_count += 1
+                color, alpha, lw = 'lime', 0.9, 2.0 
+                label = 'Accepted'
+            else:
+                color, alpha, lw = self._REJECTION_COLORS.get(reason, 'red'), 0.4, 1.0 
+                label = f'Rejected: {reason}'
+            
+            ax.plot([x1, x2], [y1, y2], color=color, lw=lw, alpha=alpha, label=label)
 
-        title = f"Final Detections ({len(self.streaks)} found)"
-        if self.expected_streak_length_px:
+        title = f"Final Detections ({accepted_count} valid, {len(self.streaks) - accepted_count} rejected)"
+        
+        # Pull whichever length metric is actively being used for the title
+        length_to_display = self.theoretical_streak_length_px if (self.use_exposure_length and self.theoretical_streak_length_px) else self.expected_streak_length_px
+        
+        if length_to_display:
             title += (f"\n(Expected streak length ≈ "
-                      f"{self.expected_streak_length_px:.0f} px"
+                      f"{length_to_display:.0f} px"
                       f" | Exposure = {self.exposure_time_s} s)")
+                      
         ax.set_title(title)
         ax.set_xlim(0, self.image_data.shape[1])
         ax.set_ylim(0, self.image_data.shape[0])
+        
+        handles, labels = ax.get_legend_handles_labels()
+        by_label = dict(zip(labels, handles))
+        ax.legend(by_label.values(), by_label.keys(), loc='upper right', fontsize=8)
+        
         plt.tight_layout()
         plt.show()
 
     # ------------------------------------------------------------------
-    # 8.  FULL PIPELINE
+    # 7.  FULL PIPELINE
     # ------------------------------------------------------------------
-    def run(self, object_rate_deg_per_s=0.0042):
+    def run(self):
         try:
             self.load_image()
-            self.estimate_streak_length(object_rate_deg_per_s=object_rate_deg_per_s)
             self.detect_streaks_by_template()
             self.display_diagnostics_plot_1()
             self.display_diagnostics_plot_2()
-            self._calculate_fft_intermediates()
-            self.display_fourier_correlation_steps()
+            # self._calculate_fft_intermediates()
+            # self.display_fourier_correlation_steps()
             self.display_nearest_neighbour_histogram()
             self.display_line_profiles()
             self.display_final_results()
@@ -600,5 +750,6 @@ class FourierStreakDetector:
 
 
 if __name__ == '__main__':
-    detector = FourierStreakDetector("9f2022f0-264a-4701-adf3-1495f64f67d1.fit")
-    detector.run(object_rate_deg_per_s=0.0042)   # adjust rate as needed
+    # Choose a FITS file to test on. Make sure to update the path as needed.
+    detector = FourierStreakDetector("PalomarArtemis_Himage20sec.fits")
+    detector.run()

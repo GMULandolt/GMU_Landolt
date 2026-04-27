@@ -425,5 +425,5 @@ class FitsStreakDetector:
 
     # Starting point
 if __name__ == '__main__':
-    detector = FitsStreakDetector("9f2022f0-264a-4701-adf3-1495f64f67d1.fit")
+    detector = FitsStreakDetector("Intelsat-40_G100_01s.fits")
     detector.run()
