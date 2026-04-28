@@ -421,7 +421,7 @@ class FourierStreakDetector:
             self.detected_peaks_coords = np.empty((0, 2), dtype=int)
             return
 
-        # Convert back to (x, y) coordinates for standard Cartesian math
+        # Convert back to (x, y) coordinates for standard math
         self.detected_peaks_coords = peak_coords_yx[:, ::-1]
         print(f"Found {len(self.detected_peaks_coords)} peaks.")
 
